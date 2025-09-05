@@ -18,6 +18,8 @@ GOTEST=$(GOCMD) test
 GOCLEAN=$(GOCMD) clean
 GOVET=$(GOCMD) vet
 GOFMT=$(GOCMD) fmt
+GOFMT_TOOL=gofmt
+RACE_FLAG=$(if $(filter 1,$(shell go env CGO_ENABLED)),-race,)
 GOTIDY=$(GOCMD) mod tidy
 
 # AWS variables
@@ -37,16 +39,26 @@ deps: ## Download dependencies
 	$(GOCMD) mod download
 	$(GOTIDY)
 
+.PHONY: install
+install: ## Install dependencies (alias like example project)
+	@echo "🟢 Installing dependencies..."
+	go mod download
+
 .PHONY: fmt
 fmt: ## Format the code
 	@echo "🟢 Formatting the code..."
 	$(GOFMT) ./...
 
 .PHONY: lint
-lint: ## Run linter
+lint: ## Run linter (go vet + gofmt diff)
 	@echo "🟢 Running linter..."
 	@$(GOVET) ./...
-	@$(GOFMT) -d -e ./...
+	@$(GOFMT_TOOL) -d -e .
+
+.PHONY: lint-ci
+lint-ci: ## Run golangci-lint (like example project)
+	@echo "🟢 Running golangci-lint..."
+	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.7 run --out-format colored-line-number
 
 .PHONY: build
 build: fmt ## Build the Lambda function
@@ -62,22 +74,52 @@ build-lambda: build ## Build Lambda deployment package
 .PHONY: test
 test: lint ## Run tests
 	@echo "🟢 Running tests..."
-	$(GOTEST) $(TEST_PATH) -race -cover
+	$(GOTEST) $(TEST_PATH) $(RACE_FLAG) -cover
+
+.PHONY: unit-test
+unit-test: lint ## Run unit tests with coverage profile
+	@echo "🟢 Running unit tests with coverage..."
+	$(GOTEST) ./... $(RACE_FLAG) -cover -covermode=atomic -coverprofile=$(TEST_COVERAGE_FILE_NAME)
+
+.PHONY: coverage-check
+coverage-check: unit-test ## Fail if coverage < 80%
+	@echo "🟢 Checking coverage threshold (80%)..."
+	@filtered=$(TEST_COVERAGE_FILE_NAME).filtered; \
+	cat $(TEST_COVERAGE_FILE_NAME) | grep -v "_mock.go" | grep -v "_response.go" \
+		| grep -v "_gateway.go" | grep -v "_datasource.go" | grep -v "_presenter.go" \
+		| grep -v "config" | grep -v "logger" | grep -v "_entity.go" | grep -v "errors.go" | grep -v "_dto.go" \
+		| grep -v "_request.go" | grep -v "middleware" | grep -v "route" | grep -v "util" | grep -v "database" | grep -v "server" | grep -v "httpclient" | grep -v "service" \
+		| grep -v "tests/bdd" | grep -v "test/bdd" > $$filtered; \
+	total_cov=$$(go tool cover -func=$$filtered | grep '^total:' | awk '{print $$3}' | tr -d '%'); \
+	if [ -z "$$total_cov" ]; then \
+		echo "Could not parse coverage"; exit 1; \
+	fi; \
+	awk -v p="$$total_cov" 'BEGIN { if (p + 0 < 80) { printf "Coverage is %.2f%% (< 80%%)\n", p; exit 1 } else { printf "Coverage is %.2f%% (>= 80%%)\n", p; exit 0 } }'
+
+.PHONY: bdd-test
+bdd-test: ## Run BDD tests with Godog
+	@echo "🟢 Running BDD tests..."
+	cd tests/bdd && go run github.com/cucumber/godog/cmd/godog@v0.15.1 run ../features --format=pretty
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with coverage
 	@echo "🟢 Running tests with coverage..."
-	$(GOTEST) $(TEST_PATH) -race -cover -coverprofile=$(TEST_COVERAGE_FILE_NAME).tmp
+	$(GOTEST) $(TEST_PATH) $(RACE_FLAG) -cover -coverprofile=$(TEST_COVERAGE_FILE_NAME).tmp
 	@cat $(TEST_COVERAGE_FILE_NAME).tmp | grep -v "_mock.go" | grep -v "_response.go" \
 	| grep -v "_gateway.go" | grep -v "_datasource.go" | grep -v "_presenter.go" \
-	| grep -v "config" | grep -v "logger" | grep -v "_entity.go" | grep -v "errors.go" | grep -v "_dto.go" > $(TEST_COVERAGE_FILE_NAME)
+	| grep -v "config" | grep -v "logger" | grep -v "_entity.go" | grep -v "errors.go" | grep -v "_dto.go" \
+	| grep -v "_request.go" | grep -v "middleware" | grep -v "route" | grep -v "util" | grep -v "database" | grep -v "server" | grep -v "httpclient" | grep -v "service" \
+	| grep -v "tests/bdd" | grep -v "test/bdd" > $(TEST_COVERAGE_FILE_NAME)
 	@rm $(TEST_COVERAGE_FILE_NAME).tmp
 	$(GOCMD) tool cover -html=$(TEST_COVERAGE_FILE_NAME)
+
+.PHONY: coverage
+coverage: test-coverage ## Alias for test-coverage (like example project)
 
 .PHONY: test-integration
 test-integration: ## Run integration tests (requires AWS credentials)
 	@echo "🟢 Running integration tests..."
-	$(GOTEST) ./... -tags=integration -race -cover
+	$(GOTEST) ./... -tags=integration $(RACE_FLAG) -cover
 
 .PHONY: clean
 clean: ## Clean up binaries and coverage files
@@ -150,14 +192,15 @@ lambda-logs: ## View Lambda function logs
 	aws logs tail /aws/lambda/$(FUNCTION_NAME) --follow
 
 .PHONY: mock
-mock: ## Generate mocks
-	@echo "🟢 Generating mocks..."
+mock: ## Generate mocks (uber mockgen)
+	@echo "🟢 Generating mocks (uber mockgen)..."
+	@mkdir -p internal/core/port/mocks
 	@rm -rf internal/core/port/mocks/*
 	@for file in internal/core/port/*.go; do \
-		go tool mockgen -source=$$file -destination=internal/core/port/mocks/`basename $$file _port.go`_mock.go; \
+		go run go.uber.org/mock/mockgen@latest -source=$$file -destination=internal/core/port/mocks/`basename $$file _port.go`_mock.go; \
 	done
 
 .PHONY: security-scan
 security-scan: ## Run security scan
 	@echo "🟢 Running security scan..."
-	@go tool govulncheck -show verbose ./...
+	@go run golang.org/x/vuln/cmd/govulncheck@latest ./...

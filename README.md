@@ -16,8 +16,8 @@ AWS Lambda function developed for the FIAP Hackathon that processes video files 
 ### Key Features
 
 - **Video Processing**: Extracts frames from uploaded video files at configurable frame rates
-- **Frame Extraction**: Uses FFmpeg to extract frames as PNG images
-- **ZIP Compression**: Packages extracted frames into a downloadable ZIP file
+- **Frame Extraction**: Uses FFmpeg to extract frames as PNG or JPG images (configurable)
+- **ZIP Compression**: Packages extracted frames into a downloadable ZIP file (uploaded to S3)
 - **S3 Integration**: Downloads videos from S3, uploads processed frames, and cleans up original files
 - **Serverless**: Runs as AWS Lambda function with optimized performance
 - **Clean Architecture**: Well-structured codebase following Clean Architecture principles
@@ -60,7 +60,7 @@ This service implements Clean Architecture with the following layers:
 
 ### Prerequisites
 
-- Go 1.21+
+- Go 1.25+
 - FFmpeg (for local development)
 - AWS CLI configured
 - Docker (for containerized builds)
@@ -114,6 +114,8 @@ make deploy
 
 ### Response Format
 
+Note: output_key is the S3 object key for the generated ZIP in the processed bucket. Construct a public URL as needed (e.g., via a CDN or S3 access policy).
+
 ```json
 {
   "success": true,
@@ -141,6 +143,21 @@ make deploy
 
 ## 🧪 Testing
 
+### Unit tests (with testify)
+
+- Run unit tests: `make unit-test`
+- Check coverage (fails if < 80%): `make coverage-check`
+
+### BDD tests (Godog + testify)
+
+- Define scenarios in `tests/features/*.feature`
+- Run BDD tests: `make bdd-test`
+
+### Mocks (Uber mockgen)
+
+- Generate mocks for ports: `make mock`
+- The generator uses `go.uber.org/mock/mockgen`. Generated files are stored under `internal/core/port/mocks`.
+
 ```bash
 # Run unit tests
 make test
@@ -153,6 +170,22 @@ make test-integration
 ```
 
 ## 📦 Deployment
+
+### CI/CD (GitHub Actions)
+
+This repo includes workflows to enforce quality and ship images:
+
+- `ci-unit-test.yml`: runs unit tests and enforces >= 80% coverage
+- `ci-bdd-tests.yml`: runs BDD tests with Godog
+- `ci-build-deploy.yml`: builds and pushes the Docker image to ECR after BDD passes on `main`
+
+Required repository secrets:
+
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` (if applicable)
+- `AWS_REGION` (e.g., `us-east-1`)
+- `ECR_REPOSITORY` (e.g., `fiap-hackathon-dev-video-processor`)
+
+Images are tagged as `latest` and `${{ github.sha }}`.
 
 ### Docker Container
 
@@ -178,7 +211,7 @@ The service is designed to run as AWS Lambda function with:
 ### Processing Configuration
 
 - **frame_rate**: Frames per second to extract (default: 1.0)
-- **output_format**: Output image format (default: "png")
+- **output_format**: Output image format (default: "png", supports: png, jpg)
 
 ### S3 Bucket Structure
 
