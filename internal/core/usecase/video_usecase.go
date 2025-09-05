@@ -2,9 +2,11 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
+	domain "github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain/entity"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port"
@@ -40,11 +42,19 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 	localVideoPath, err := uc.downloadVideoToLocal(ctx, input.VideoKey)
 	if err != nil {
 		log.Error("Failed to download video", "error", err)
+		var nErr *domain.NotFoundError
+		if errors.As(err, &nErr) {
+			return &dto.ProcessVideoOutput{
+				Success: false,
+				Message: "Processing failed",
+				Error:   fmt.Sprintf("Failed to download video: %v", err),
+			}, domain.NewNotFoundError(domain.ErrNotFound)
+		}
 		return &dto.ProcessVideoOutput{
 			Success: false,
 			Message: "Processing failed",
 			Error:   fmt.Sprintf("Failed to download video: %v", err),
-		}, err
+		}, domain.NewInternalError(err)
 	}
 	defer uc.fileManager.DeleteFile(ctx, localVideoPath)
 	log.Info("Video downloaded successfully", "local_path", localVideoPath)
@@ -57,7 +67,7 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 			Success: false,
 			Message: "Processing failed",
 			Error:   fmt.Sprintf("Invalid video format: %v", err),
-		}, err
+		}, domain.NewValidationError(err)
 	}
 	log.Info("Video format validated successfully")
 
@@ -83,7 +93,7 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 			Success: false,
 			Message: "Processing failed",
 			Error:   fmt.Sprintf("Failed to process video: %v", err),
-		}, err
+		}, domain.NewInternalError(err)
 	}
 	defer uc.fileManager.DeleteFile(ctx, zipPath)
 	log.Info("Frame extraction completed", "frame_count", frameCount, "zip_path", zipPath)
@@ -94,7 +104,7 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 			Success: false,
 			Message: "Processing failed",
 			Error:   "No frames extracted from video",
-		}, fmt.Errorf("no frames extracted from video")
+		}, domain.NewInvalidInputError("no frames extracted from video")
 	}
 
 	// Upload ZIP to storage
@@ -106,7 +116,7 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 			Success: false,
 			Message: "Processing failed",
 			Error:   fmt.Sprintf("Failed to upload result: %v", err),
-		}, err
+		}, domain.NewInternalError(err)
 	}
 	log.Info("Upload completed successfully", "output_key", outputKey)
 

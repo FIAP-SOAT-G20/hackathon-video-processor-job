@@ -3,8 +3,10 @@ package lambda
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	domain "github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain/entity"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port"
@@ -56,11 +58,17 @@ func (h *Handler) Handle(ctx context.Context, event json.RawMessage) (interface{
 	result, err := h.videoController.ProcessVideo(ctx, input)
 	if err != nil {
 		log.Error("Video processing failed in controller", "error", err)
-		// Return error response with proper status code
-		return LambdaResponse{
-			StatusCode: 500,
-			Body:       string(result),
-		}, nil
+		// Map domain error types to HTTP status codes
+		status := 500
+		var vErr *domain.ValidationError
+		var iErr *domain.InvalidInputError
+		var nErr *domain.NotFoundError
+		if errors.As(err, &vErr) || errors.As(err, &iErr) {
+			status = 400
+		} else if errors.As(err, &nErr) {
+			status = 404
+		}
+		return LambdaResponse{StatusCode: status, Body: string(result)}, nil
 	}
 
 	// Return success response

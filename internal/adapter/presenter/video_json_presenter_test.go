@@ -2,10 +2,12 @@ package presenter
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
-	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 	"github.com/stretchr/testify/require"
+
+	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 )
 
 func TestVideoJsonPresenter(t *testing.T) {
@@ -31,7 +33,7 @@ func TestVideoJsonPresenter(t *testing.T) {
 	t.Run("PresentError", func(t *testing.T) {
 		r := require.New(t)
 		p := NewVideoJsonPresenter()
-		b := p.PresentError(assertErr{})
+		b := p.PresentError(errors.New("boom"))
 		var m map[string]any
 		err := json.Unmarshal(b, &m)
 		r.NoError(err)
@@ -40,7 +42,3 @@ func TestVideoJsonPresenter(t *testing.T) {
 		r.NotEmpty(m["error"])
 	})
 }
-
-type assertErr struct{}
-
-func (assertErr) Error() string { return "boom" }

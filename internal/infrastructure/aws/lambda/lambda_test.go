@@ -3,8 +3,10 @@ package lambda
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
+	domain "github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/infrastructure/logger"
 	"github.com/stretchr/testify/require"
@@ -38,5 +40,38 @@ func TestHandler(t *testing.T) {
 		err = json.Unmarshal(b, &m)
 		r.NoError(err)
 		r.Equal(400, int(m["statusCode"].(float64)))
+	})
+
+	t.Run("ControllerValidationError => 400", func(t *testing.T) {
+		r := require.New(t)
+		h := NewHandler(stubController{resp: []byte(`{"success":false}`), err: domain.NewValidationError(errors.New("bad video"))}, logger.NewSlogLogger())
+		body, err := h.Handle(context.Background(), []byte(`{"video_key":"foo.mp4"}`))
+		r.NoError(err)
+		b, _ := json.Marshal(body)
+		var m map[string]any
+		r.NoError(json.Unmarshal(b, &m))
+		r.Equal(400, int(m["statusCode"].(float64)))
+	})
+
+	t.Run("ControllerNotFoundError => 404", func(t *testing.T) {
+		r := require.New(t)
+		h := NewHandler(stubController{resp: []byte(`{"success":false}`), err: domain.NewNotFoundError(domain.ErrNotFound)}, logger.NewSlogLogger())
+		body, err := h.Handle(context.Background(), []byte(`{"video_key":"foo.mp4"}`))
+		r.NoError(err)
+		b, _ := json.Marshal(body)
+		var m map[string]any
+		r.NoError(json.Unmarshal(b, &m))
+		r.Equal(404, int(m["statusCode"].(float64)))
+	})
+
+	t.Run("ControllerInternalError => 500", func(t *testing.T) {
+		r := require.New(t)
+		h := NewHandler(stubController{resp: []byte(`{"success":false}`), err: domain.NewInternalError(errors.New("boom"))}, logger.NewSlogLogger())
+		body, err := h.Handle(context.Background(), []byte(`{"video_key":"foo.mp4"}`))
+		r.NoError(err)
+		b, _ := json.Marshal(body)
+		var m map[string]any
+		r.NoError(json.Unmarshal(b, &m))
+		r.Equal(500, int(m["statusCode"].(float64)))
 	})
 }

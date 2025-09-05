@@ -3,6 +3,7 @@ package usecase
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 	pmocks "github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port/mocks"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/infrastructure/logger"
@@ -100,16 +102,37 @@ func TestVideoUseCase(t *testing.T) {
 			fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(localPath, nil)
 			vg.EXPECT().Download(gomock.Any(), videoKey).Return(io.NopCloser(strings.NewReader("data")), nil)
 			fm.EXPECT().WriteToFile(gomock.Any(), localPath, gomock.Any()).Return(nil)
-			vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(assertErr{})
+			vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(errors.New("boom"))
 			fm.EXPECT().DeleteFile(gomock.Any(), localPath).Return(nil)
 
 			out, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: videoKey})
 			require.Error(t, err)
 			require.False(t, out.Success)
+			var vErr *domain.ValidationError
+			require.ErrorAs(t, err, &vErr)
+		})
+
+		// optional: ensure download errors are wrapped as InternalError
+		t.Run("download_error_internal", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			vg := pmocks.NewMockVideoGateway(ctrl)
+			vp := pmocks.NewMockVideoProcessor(ctrl)
+			fm := pmocks.NewMockFileManager(ctrl)
+			log := logger.NewSlogLogger()
+
+			uc := NewVideoUseCase(vg, vp, fm, log)
+
+			videoKey := "folder/foo.mp4"
+			localPath := "/tmp/video123.mp4"
+
+			fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(localPath, nil)
+			vg.EXPECT().Download(gomock.Any(), videoKey).Return(nil, errors.New("download failed"))
+
+			_, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: videoKey})
+			var iErr *domain.InternalError
+			require.ErrorAs(t, err, &iErr)
 		})
 	})
 }
-
-type assertErr struct{}
-
-func (assertErr) Error() string { return "boom" }
