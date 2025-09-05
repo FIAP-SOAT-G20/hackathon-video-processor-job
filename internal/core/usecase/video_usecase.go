@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain/entity"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
@@ -74,7 +75,8 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 
 	// Process video and extract frames
 	log.Info("Starting frame extraction")
-	_, frameCount, zipPath, err := uc.videoProcessor.ProcessVideo(ctx, localVideoPath, config.FrameRate)
+	outputFormat := strings.ToLower(strings.TrimSpace(config.OutputFormat))
+	_, frameCount, zipPath, err := uc.videoProcessor.ProcessVideo(ctx, localVideoPath, config.FrameRate, outputFormat)
 	if err != nil {
 		log.Error("Failed to process video", "error", err)
 		return &dto.ProcessVideoOutput{
@@ -182,19 +184,8 @@ func (uc *videoUseCase) uploadResultToStorage(ctx context.Context, zipPath, orig
 
 func (uc *videoUseCase) generateOutputKey(originalVideoKey string) string {
 	baseKey := originalVideoKey
-	if lastDot := uc.lastIndexOf(baseKey, "."); lastDot != -1 {
+	if lastDot := strings.LastIndex(baseKey, "."); lastDot != -1 {
 		baseKey = baseKey[:lastDot]
 	}
-
 	return fmt.Sprintf("processed/%s_frames.zip", baseKey)
-}
-
-func (uc *videoUseCase) lastIndexOf(s, substr string) int {
-	idx := -1
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			idx = i
-		}
-	}
-	return idx
 }

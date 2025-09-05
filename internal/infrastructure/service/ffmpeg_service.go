@@ -24,7 +24,7 @@ func NewFFmpegService(fileManager port.FileManager) port.VideoProcessor {
 }
 
 // ProcessVideo processes video and extracts frames using FFmpeg
-func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, frameRate float64) ([]string, int, string, error) {
+func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, frameRate float64, outputFormat string) ([]string, int, string, error) {
 	// Create temporary directory for frames
 	tempDir, err := s.fileManager.CreateTempDir(ctx, "frames_")
 	if err != nil {
@@ -33,7 +33,7 @@ func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, fram
 	defer s.fileManager.DeleteDir(ctx, tempDir)
 
 	// Extract frames
-	framePaths, err := s.extractFrames(ctx, videoPath, frameRate, tempDir)
+	framePaths, err := s.extractFrames(ctx, videoPath, frameRate, strings.ToLower(strings.TrimSpace(outputFormat)), tempDir)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("failed to extract frames: %w", err)
 	}
@@ -64,6 +64,7 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 
 	// Use FFprobe to validate video
 	cmd := exec.CommandContext(ctx, "ffprobe",
+		"-hide_banner",
 		"-v", "error",
 		"-select_streams", "v:0",
 		"-count_packets",
@@ -86,15 +87,35 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 	return nil
 }
 
-func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, frameRate float64, outputDir string) ([]string, error) {
-	framePattern := filepath.Join(outputDir, "frame_%04d.png")
+func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, frameRate float64, outputFormat string, outputDir string) ([]string, error) {
+	// normalize/sanitize output format
+	ext := outputFormat
+	switch ext {
+	case "jpg", "jpeg":
+		ext = "jpg"
+	case "png":
+		// keep
+	case "webp":
+		// optional future support, default to png for now
+		ext = "png"
+	default:
+		// default to png
+		ext = "png"
+	}
+
+	framePattern := filepath.Join(outputDir, fmt.Sprintf("frame_%%04d.%s", ext))
 
 	// Build FFmpeg command
 	args := []string{
+		"-hide_banner",
 		"-i", videoPath,
 		"-vf", fmt.Sprintf("fps=%f", frameRate),
 		"-y", // Overwrite output files
 		framePattern,
+	}
+	if ext == "jpg" {
+		// better quality for jpg outputs
+		args = []string{"-hide_banner", "-i", videoPath, "-vf", fmt.Sprintf("fps=%f", frameRate), "-qscale:v", "2", "-y", framePattern}
 	}
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
@@ -104,7 +125,8 @@ func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, fra
 	}
 
 	// List extracted frame files
-	framePaths, err := s.fileManager.ListFiles(ctx, outputDir, "*.png")
+	pattern := fmt.Sprintf("*.%s", ext)
+	framePaths, err := s.fileManager.ListFiles(ctx, outputDir, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list frame files: %w", err)
 	}

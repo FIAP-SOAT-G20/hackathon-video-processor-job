@@ -34,13 +34,15 @@ func (h *Handler) Handle(ctx context.Context, event json.RawMessage) (interface{
 	var lambdaEvent LambdaEvent
 	if err := json.Unmarshal(event, &lambdaEvent); err != nil {
 		log.Error("Failed to parse Lambda event", "error", err)
-		return nil, fmt.Errorf("failed to parse event: %w", err)
+		body := toErrorBody("Bad request", fmt.Sprintf("failed to parse event: %v", err))
+		return LambdaResponse{StatusCode: 400, Body: body}, nil
 	}
 	log.Debug("Lambda event parsed successfully", "video_key", lambdaEvent.VideoKey)
 
 	if lambdaEvent.VideoKey == "" {
 		log.Error("Missing video_key in Lambda event")
-		return nil, fmt.Errorf("video_key is required")
+		body := toErrorBody("Bad request", "video_key is required")
+		return LambdaResponse{StatusCode: 400, Body: body}, nil
 	}
 
 	// Convert to DTO
@@ -79,4 +81,14 @@ type LambdaEvent struct {
 type LambdaResponse struct {
 	StatusCode int    `json:"statusCode"`
 	Body       string `json:"body"`
+}
+
+func toErrorBody(message, err string) string {
+	m := map[string]any{
+		"success": false,
+		"message": message,
+		"error":   err,
+	}
+	b, _ := json.Marshal(m)
+	return string(b)
 }

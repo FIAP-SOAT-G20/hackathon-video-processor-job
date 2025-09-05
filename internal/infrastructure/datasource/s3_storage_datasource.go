@@ -47,7 +47,7 @@ func (ds *S3StorageDataSource) Download(ctx context.Context, key string) (io.Rea
 	return result.Body, nil
 }
 
-// Upload uploads data to S3
+// Upload uploads data to S3. Returns the object key that was uploaded.
 func (ds *S3StorageDataSource) Upload(ctx context.Context, key string, data io.Reader, contentType string, size int64) (string, error) {
 	bucket := ds.processedBucket
 	if strings.Contains(key, "raw/") || strings.Contains(key, "video/") {
@@ -66,9 +66,8 @@ func (ds *S3StorageDataSource) Upload(ctx context.Context, key string, data io.R
 		return "", fmt.Errorf("failed to upload to S3: %w", err)
 	}
 
-	// Return S3 URL
-	url := fmt.Sprintf("https://%s.s3.amazonaws.com/%s", bucket, key)
-	return url, nil
+	// Return the key to align with response semantics
+	return key, nil
 }
 
 // Delete deletes an object from S3
