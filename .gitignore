@@ -8,19 +8,76 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Code coverage profiles and other test artifacts
+# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-coverage.*
-*.coverprofile
-profile.cov
+coverage.out
 
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
-.env
+# Environment files
+*.env
+!.env.example
 
-# Editor/IDE
+# IDEs and editors
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+bin/
+dist/
+bootstrap
+main
+function.zip
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Test videos and outputs (for local development)
+test-videos/
+test-output/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# AWS related
+.aws/
+aws-config/
+
+# Lambda deployment artifacts
+*.zip
+
+# Coverage reports
+coverage.html
+
+# Dependency directories
+vendor/
+
+# Go sum backup
+go.sum.backup
+
+# Air live reload
+.air/
+
+# Keep folders with gitkeep
+!**/.gitkeep
