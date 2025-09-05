@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -34,6 +35,29 @@ func TestVideoController(t *testing.T) {
 		res, err := c.ProcessVideo(context.Background(), input)
 
 		r.NoError(err)
+		r.Equal(prBytes, res)
+	})
+
+	t.Run("ProcessVideo/error", func(t *testing.T) {
+		r := require.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		uc := pmocks.NewMockVideoUseCase(ctrl)
+		pr := pmocks.NewMockPresenter(ctrl)
+		log := logger.NewSlogLogger()
+
+		c := NewVideoController(uc, pr, log)
+
+		input := dto.ProcessVideoInput{VideoKey: "bar.mp4"}
+		errBoom := errors.New("boom")
+		prBytes := []byte(`{"success":false}`)
+
+		uc.EXPECT().ProcessVideo(gomock.Any(), input).Return(nil, errBoom)
+		pr.EXPECT().PresentError(errBoom).Return(prBytes)
+
+		res, err := c.ProcessVideo(context.Background(), input)
+		r.Error(err)
 		r.Equal(prBytes, res)
 	})
 }

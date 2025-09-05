@@ -134,5 +134,36 @@ func TestVideoUseCase(t *testing.T) {
 			var iErr *domain.InternalError
 			require.ErrorAs(t, err, &iErr)
 		})
+
+		// zero frames should produce InvalidInputError and cleanup temp files
+		t.Run("zero_frames_invalid_input", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			vg := pmocks.NewMockVideoGateway(ctrl)
+			vp := pmocks.NewMockVideoProcessor(ctrl)
+			fm := pmocks.NewMockFileManager(ctrl)
+			log := logger.NewSlogLogger()
+
+			uc := NewVideoUseCase(vg, vp, fm, log)
+
+			videoKey := "folder/empty.mp4"
+			localPath := "/tmp/empty.mp4"
+			zipPath := "/tmp/frames0.zip"
+
+			fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(localPath, nil)
+			vg.EXPECT().Download(gomock.Any(), videoKey).Return(io.NopCloser(strings.NewReader("data")), nil)
+			fm.EXPECT().WriteToFile(gomock.Any(), localPath, gomock.Any()).Return(nil)
+			vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(nil)
+			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "png").Return([]string{}, 0, zipPath, nil)
+
+			// defers should cleanup these files when error occurs
+			fm.EXPECT().DeleteFile(gomock.Any(), localPath).Return(nil)
+			fm.EXPECT().DeleteFile(gomock.Any(), zipPath).Return(nil)
+
+			_, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: videoKey})
+			var invErr *domain.InvalidInputError
+			require.ErrorAs(t, err, &invErr)
+		})
 	})
 }
