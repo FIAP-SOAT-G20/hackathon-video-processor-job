@@ -112,7 +112,7 @@ func TestVideoUseCase(t *testing.T) {
 			require.ErrorAs(t, err, &vErr)
 		})
 
-		// optional: ensure download errors are wrapped as InternalError
+		// ensure download errors are wrapped as InternalError
 		t.Run("download_error_internal", func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -164,6 +164,29 @@ func TestVideoUseCase(t *testing.T) {
 			_, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: videoKey})
 			var invErr *domain.InvalidInputError
 			require.ErrorAs(t, err, &invErr)
+		})
+
+		t.Run("download_not_found", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			vg := pmocks.NewMockVideoGateway(ctrl)
+			vp := pmocks.NewMockVideoProcessor(ctrl)
+			fm := pmocks.NewMockFileManager(ctrl)
+			log := logger.NewSlogLogger()
+
+			uc := NewVideoUseCase(vg, vp, fm, log)
+
+			videoKey := "missing.mp4"
+			localPath := "/tmp/missing.mp4"
+
+			fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(localPath, nil)
+			vg.EXPECT().Download(gomock.Any(), videoKey).Return(nil, domain.NewNotFoundError(domain.ErrNotFound))
+
+			out, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: videoKey})
+			var nf *domain.NotFoundError
+			require.ErrorAs(t, err, &nf)
+			require.False(t, out.Success)
 		})
 	})
 }
