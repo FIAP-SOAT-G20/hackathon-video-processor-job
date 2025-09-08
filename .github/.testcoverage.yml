@@ -1,0 +1,21 @@
+# Config file for go-test-coverage github action.
+
+profile: cover.out
+local-prefix: github.com/FIAP-SOAT-G20/hackathon-video-processor-job
+threshold:
+  total: 80
+exclude:
+  paths:
+    - docs/*
+    - ^.*_mock\.go$
+    - ^.*_request\.go$
+    - ^.*_response\.go$
+    - ^.*_gateway\.go$
+    - ^.*_datasource.*\.go$
+    - ^.*_presenter\.go$
+    - ^.*_entity\.go$
+    - ^.*errors\.go$
+    - ^.*_dto\.go$
+    - test/*
+    - tests/*
+
