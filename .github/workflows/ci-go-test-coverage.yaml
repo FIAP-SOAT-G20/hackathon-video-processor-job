@@ -1,0 +1,103 @@
+name: ci/coverage
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ opened, reopened, synchronize ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  go-test-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Display Go version
+        run: go version
+
+      - name: Generate test coverage
+        run: go test -json -timeout 2m -race ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+
+      - name: Check test coverage
+        id: coverage
+        uses: vladopajic/go-test-coverage@v2
+        continue-on-error: true
+        with:
+          config: ./.github/.testcoverage.yml
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            cover.out
+            .github/.testcoverage.yml
+          retention-days: 7
+
+      - name: Generate coverage summary
+        if: always()
+        id: coverage-summary
+        run: |
+          if [ "${{ steps.coverage.outcome }}" = "success" ]; then
+            COVERAGE_STATUS="✅ PASSED"
+            COVERAGE_RESULT="Coverage requirements met"
+          else
+            COVERAGE_STATUS="❌ FAILED"
+            COVERAGE_RESULT="Coverage requirements not met"
+          fi
+          echo '${{ steps.coverage.outputs.report }}' > coverage_report_raw.txt || true
+          COVERAGE_REPORT=$(cat coverage_report_raw.txt || true)
+          cat > coverage_summary.md << EOF
+          ## 📊 Test Coverage Report
+
+          **Status:** $COVERAGE_STATUS
+          **Result:** $COVERAGE_RESULT
+
+          ### 🎯 Coverage Details:
+          \`\`\`
+          $COVERAGE_REPORT
+          \`\`\`
+
+          ### 📋 Coverage Requirements:
+          - Minimum Threshold: 80%
+          - Coverage Profile: ./cover.out
+          - Coverage Mode: atomic
+
+          ### 🔧 Test Configuration:
+          - Go Version: $(go version)
+          - Race Detection: enabled
+          - Timeout: 2 minutes
+          - Test Packages: ./...
+          EOF
+          cat coverage_summary.md >> $GITHUB_STEP_SUMMARY
+          {
+            echo "SUMMARY_CONTENT<<EOF"
+            cat coverage_summary.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Comment coverage report on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: ${{ steps.coverage-summary.outputs.SUMMARY_CONTENT }}
+          comment_tag: coverage-report
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          mode: upsert
+          create_if_not_exists: true
+
+      - name: finally check coverage
+        if: steps.coverage.outcome == 'failure'
+        shell: bash
+        run: echo "coverage check failed"
+
