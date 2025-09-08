@@ -18,7 +18,7 @@ func TestLocalFileService(t *testing.T) {
 	dir, err := s.CreateTempDir(context.Background(), "test_")
 	r.NoError(err)
 	r.DirExists(dir)
-	defer s.DeleteDir(context.Background(), dir)
+	defer func() { _ = s.DeleteDir(context.Background(), dir) }()
 
 	f, err := s.CreateTempFile(context.Background(), "file_", ".txt")
 	r.NoError(err)
@@ -29,7 +29,7 @@ func TestLocalFileService(t *testing.T) {
 
 	rc, err := s.ReadFile(context.Background(), f)
 	r.NoError(err)
-	rc.Close()
+	r.NoError(rc.Close())
 
 	// Size
 	sz, err := s.GetFileSize(context.Background(), f)

@@ -56,7 +56,11 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 			Error:   fmt.Sprintf("Failed to download video: %v", err),
 		}, domain.NewInternalError(err)
 	}
-	defer uc.fileManager.DeleteFile(ctx, localVideoPath)
+	defer func() {
+		if err := uc.fileManager.DeleteFile(ctx, localVideoPath); err != nil {
+			log.Warn("Failed to delete temp video file", "path", localVideoPath, "error", err)
+		}
+	}()
 	log.Info("Video downloaded successfully", "local_path", localVideoPath)
 
 	// Validate video format
@@ -95,7 +99,11 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 			Error:   fmt.Sprintf("Failed to process video: %v", err),
 		}, domain.NewInternalError(err)
 	}
-	defer uc.fileManager.DeleteFile(ctx, zipPath)
+	defer func() {
+		if err := uc.fileManager.DeleteFile(ctx, zipPath); err != nil {
+			log.Warn("Failed to delete temp zip file", "path", zipPath, "error", err)
+		}
+	}()
 	log.Info("Frame extraction completed", "frame_count", frameCount, "zip_path", zipPath)
 
 	if frameCount == 0 {
@@ -151,7 +159,11 @@ func (uc *videoUseCase) downloadVideoToLocal(ctx context.Context, videoKey strin
 		log.Error("Failed to download from storage", "error", err)
 		return "", fmt.Errorf("failed to download from storage: %w", err)
 	}
-	defer reader.Close()
+	defer func() {
+		if cerr := reader.Close(); cerr != nil {
+			log.Warn("Failed to close reader", "error", cerr)
+		}
+	}()
 	log.Debug("Video reader obtained from storage")
 
 	if err := uc.fileManager.WriteToFile(ctx, tempFile, reader); err != nil {
@@ -170,7 +182,11 @@ func (uc *videoUseCase) uploadResultToStorage(ctx context.Context, zipPath, orig
 		log.Error("Failed to read zip file", "error", err)
 		return "", fmt.Errorf("failed to read zip file: %w", err)
 	}
-	defer reader.Close()
+	defer func() {
+		if cerr := reader.Close(); cerr != nil {
+			log.Warn("Failed to close reader", "error", cerr)
+		}
+	}()
 
 	size, err := uc.fileManager.GetFileSize(ctx, zipPath)
 	if err != nil {

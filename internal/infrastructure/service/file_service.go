@@ -36,7 +36,9 @@ func (s *LocalFileService) CreateTempFile(ctx context.Context, prefix, suffix st
 	}
 
 	path := file.Name()
-	file.Close()
+	if err := file.Close(); err != nil {
+		return "", fmt.Errorf("failed to close temp file: %w", err)
+	}
 
 	return path, nil
 }
@@ -57,7 +59,9 @@ func (s *LocalFileService) WriteToFile(ctx context.Context, filePath string, dat
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	_, err = io.Copy(file, data)
 	if err != nil {

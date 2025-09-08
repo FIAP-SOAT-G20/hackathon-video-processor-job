@@ -30,7 +30,9 @@ func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, fram
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer s.fileManager.DeleteDir(ctx, tempDir)
+	defer func() {
+		_ = s.fileManager.DeleteDir(ctx, tempDir)
+	}()
 
 	// Extract frames
 	framePaths, err := s.extractFrames(ctx, videoPath, frameRate, strings.ToLower(strings.TrimSpace(outputFormat)), tempDir)
@@ -140,11 +142,15 @@ func (s *FFmpegService) createZipFromFiles(files []string, outputPath string) er
 	if err != nil {
 		return fmt.Errorf("failed to create zip file: %w", err)
 	}
-	defer zipFile.Close()
+	defer func() {
+		_ = zipFile.Close()
+	}()
 
 	// Create ZIP writer
 	zipWriter := zip.NewWriter(zipFile)
-	defer zipWriter.Close()
+	defer func() {
+		_ = zipWriter.Close()
+	}()
 
 	// Add each file to the ZIP
 	for _, filePath := range files {
@@ -162,7 +168,9 @@ func (s *FFmpegService) addFileToZip(zipWriter *zip.Writer, filePath string) err
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// Get file info
 	info, err := file.Stat()
