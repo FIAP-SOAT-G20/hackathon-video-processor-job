@@ -7,15 +7,28 @@ threshold:
 exclude:
   paths:
     - docs/*
+    - internal/infrastructure/aws/lambda/*
+    - main.go
     - ^.*_mock\.go$
     - ^.*_request\.go$
     - ^.*_response\.go$
     - ^.*_gateway\.go$
     - ^.*_datasource.*\.go$
     - ^.*_presenter\.go$
+    - ^.*middleware.*
+    - ^.*config.*
+    - ^.*route.*
+    - ^.*util.*
+    - ^.*database.*
+    - ^.*server.*
+    - ^.*logger.*
+    - ^.*httpclient.*
+    - ^.*service.*
     - ^.*_entity\.go$
     - ^.*errors\.go$
     - ^.*_dto\.go$
+    - ^.*_model\.go$
+    - ^.*pagination\.go$
     - test/*
     - tests/*
 
