@@ -31,6 +31,10 @@ func NewFFmpegService(fileManager port.FileManager) port.VideoProcessor {
 
 // ProcessVideo processes video and extracts frames using FFmpeg
 func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, frameRate float64, outputFormat string) ([]string, int, string, error) {
+	// Sanitize inputs
+	if frameRate <= 0 {
+		frameRate = 1.0
+	}
 	// Create temporary directory for frames
 	tempDir, err := s.fileManager.CreateTempDir(ctx, "frames_")
 	if err != nil {
@@ -72,7 +76,6 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 
 	// Use FFprobe to validate video
 	cmd := exec.CommandContext(ctx, "ffprobe",
-		"-hide_banner",
 		"-v", "error",
 		"-select_streams", "v:0",
 		"-count_packets",
@@ -114,17 +117,41 @@ func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, fra
 
 	framePattern := filepath.Join(outputDir, fmt.Sprintf("frame_%%04d.%s", ext))
 
-	// Build FFmpeg command
-	args := []string{
-		"-hide_banner",
-		"-i", videoPath,
-		"-vf", fmt.Sprintf("fps=%f", frameRate),
-		"-y", // Overwrite output files
-		framePattern,
-	}
+	// Build FFmpeg command based on output format
+	var args []string
 	if ext == "jpg" {
-		// Apply high quality setting for JPEG outputs
-		args = []string{"-hide_banner", "-i", videoPath, "-vf", fmt.Sprintf("fps=%f", frameRate), "-qscale:v", DefaultJPEGQuality, "-y", framePattern}
+		// JPEG output with robust settings (no -vsync/-r to avoid conflicts)
+		args = []string{
+			"-nostdin",
+			"-loglevel", "error",
+			"-y",
+			"-i", videoPath,
+			"-map", "0:v:0",
+			"-an",
+			"-vf", fmt.Sprintf("fps=%g", frameRate),
+			"-start_number", "0",
+			"-f", "image2",
+			"-vcodec", "mjpeg",
+			"-q:v", DefaultJPEGQuality,
+			"-frame_pts", "1",
+			framePattern,
+		}
+	} else {
+		// PNG output (default) - robust settings similar to JPG
+		args = []string{
+			"-nostdin",
+			"-loglevel", "error",
+			"-y",
+			"-i", videoPath,
+			"-map", "0:v:0",
+			"-an",
+			"-vf", fmt.Sprintf("fps=%g", frameRate),
+			"-start_number", "0",
+			"-f", "image2",
+			"-vcodec", "png",
+			"-frame_pts", "1",
+			framePattern,
+		}
 	}
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)

@@ -75,22 +75,20 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 	}
 	log.Info("Video format validated successfully")
 
-	// Set default configuration if not provided
-	config := input.Configuration
-	if config == nil {
-		config = &entity.ProcessingConfig{
-			FrameRate:    1.0,
-			OutputFormat: "png",
-		}
+	// Set configuration from input (application DTO) -> domain entity
+	var cfg entity.ProcessingConfig
+	if input.Configuration == nil {
+		cfg = entity.ProcessingConfig{FrameRate: 1.0, OutputFormat: "png"}
 		log.Info("Using default configuration")
 	} else {
-		log.Info("Using custom configuration", "frame_rate", config.FrameRate, "output_format", config.OutputFormat)
+		cfg = entity.ProcessingConfig{FrameRate: input.Configuration.FrameRate, OutputFormat: input.Configuration.OutputFormat}
+		log.Info("Using custom configuration", "frame_rate", cfg.FrameRate, "output_format", cfg.OutputFormat)
 	}
 
 	// Process video and extract frames
 	log.Info("Starting frame extraction")
-	outputFormat := strings.ToLower(strings.TrimSpace(config.OutputFormat))
-	_, frameCount, zipPath, err := uc.videoProcessor.ProcessVideo(ctx, localVideoPath, config.FrameRate, outputFormat)
+	outputFormat := strings.ToLower(strings.TrimSpace(cfg.OutputFormat))
+	_, frameCount, zipPath, err := uc.videoProcessor.ProcessVideo(ctx, localVideoPath, cfg.FrameRate, outputFormat)
 	if err != nil {
 		log.Error("Failed to process video", "error", err)
 		return &dto.ProcessVideoOutput{

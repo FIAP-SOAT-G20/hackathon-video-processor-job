@@ -1,11 +1,15 @@
 package dto
 
-import "github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain/entity"
+// ProcessingConfigInput represents the input for video processing configuration
+type ProcessingConfigInput struct {
+	FrameRate    float64
+	OutputFormat string
+}
 
 // ProcessVideoInput represents the input for video processing
 type ProcessVideoInput struct {
 	VideoKey      string
-	Configuration *entity.ProcessingConfig
+	Configuration *ProcessingConfigInput
 }
 
 // ProcessVideoOutput represents the output of video processing

@@ -6,8 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	domain "github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
-	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain/entity"
+	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/infrastructure/logger"
@@ -47,10 +46,17 @@ func (h *Handler) Handle(ctx context.Context, event json.RawMessage) (interface{
 		return LambdaResponse{StatusCode: 400, Body: body}, nil
 	}
 
-	// Convert to DTO
+	// Convert to DTO (map payload to application DTO)
+	var cfg *dto.ProcessingConfigInput
+	if lambdaEvent.Configuration != nil {
+		cfg = &dto.ProcessingConfigInput{
+			FrameRate:    lambdaEvent.Configuration.FrameRate,
+			OutputFormat: lambdaEvent.Configuration.OutputFormat,
+		}
+	}
 	input := dto.ProcessVideoInput{
 		VideoKey:      lambdaEvent.VideoKey,
-		Configuration: lambdaEvent.Configuration,
+		Configuration: cfg,
 	}
 
 	// Process video
@@ -80,9 +86,16 @@ func (h *Handler) Handle(ctx context.Context, event json.RawMessage) (interface{
 }
 
 // LambdaEvent represents the input event for Lambda
+// ProcessingConfigPayload is used only for JSON decoding of the Lambda event
+// to keep domain entities free of serialization concerns.
+type ProcessingConfigPayload struct {
+	FrameRate    float64 `json:"frame_rate"`
+	OutputFormat string  `json:"output_format"`
+}
+
 type LambdaEvent struct {
 	VideoKey      string                   `json:"video_key"`
-	Configuration *entity.ProcessingConfig `json:"configuration,omitempty"`
+	Configuration *ProcessingConfigPayload `json:"configuration,omitempty"`
 }
 
 // LambdaResponse represents the Lambda function response
