@@ -21,9 +21,15 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags lambda.norpc -ldflags="
 # Final image based on AWS Lambda custom runtime base
 FROM public.ecr.aws/lambda/provided:al2023
 
-# Install FFmpeg for video processing
+# Install static FFmpeg binary for video processing
 RUN dnf update -y && \
-    dnf install -y ffmpeg && \
+    dnf install -y wget xz tar && \
+    wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
+    tar xf ffmpeg-release-amd64-static.tar.xz && \
+    mv ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ && \
+    mv ffmpeg-*-amd64-static/ffprobe /usr/local/bin/ && \
+    rm -rf ffmpeg-* && \
+    chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe && \
     dnf clean all
 
 # Copy the compiled binary from the build stage
