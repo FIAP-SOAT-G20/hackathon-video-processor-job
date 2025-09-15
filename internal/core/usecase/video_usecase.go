@@ -85,9 +85,17 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 		log.Info("Using custom configuration", "frame_rate", cfg.FrameRate, "output_format", cfg.OutputFormat)
 	}
 
+	// Sanitize config
+	if cfg.FrameRate <= 0 {
+		cfg.FrameRate = 1.0
+	}
+	outputFormat := strings.ToLower(strings.TrimSpace(cfg.OutputFormat))
+	if outputFormat == "" {
+		outputFormat = "png"
+	}
+
 	// Process video and extract frames
 	log.Info("Starting frame extraction")
-	outputFormat := strings.ToLower(strings.TrimSpace(cfg.OutputFormat))
 	_, frameCount, zipPath, err := uc.videoProcessor.ProcessVideo(ctx, localVideoPath, cfg.FrameRate, outputFormat)
 	if err != nil {
 		log.Error("Failed to process video", "error", err)

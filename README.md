@@ -98,7 +98,26 @@ make build-lambda
 make deploy
 ```
 
-## 📋 Usage
+## Usage
+
+### Lambda direct invocation payload
+
+Example:
+
+```json path=null start=null
+{
+  "video_key": "video.mp4",
+  "configuration": {
+    "frame_rate": 1.0,
+    "output_format": "png"
+  }
+}
+```
+
+Notes:
+- frame_rate: frames per second to extract. If missing or <= 0, defaults to 1.0.
+- output_format: one of png or jpg (jpeg). Case-insensitive. Unknown values default to png.
+- The service returns a ZIP with extracted frames uploaded under processed/<original>_frames.zip.
 
 ### Lambda Event Format
 

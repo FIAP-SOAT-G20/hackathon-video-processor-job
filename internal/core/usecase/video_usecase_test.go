@@ -189,4 +189,39 @@ func TestVideoUseCase(t *testing.T) {
 			require.False(t, out.Success)
 		})
 	})
+
+	t.Run("ProcessVideo_custom_config_sanitization_frameRate_and_format_lowercase", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		vg := pmocks.NewMockVideoGateway(ctrl)
+		vp := pmocks.NewMockVideoProcessor(ctrl)
+		fm := pmocks.NewMockFileManager(ctrl)
+		log := logger.NewSlogLogger()
+
+		uc := NewVideoUseCase(vg, vp, fm, log)
+
+		videoKey := "vid.mp4"
+		localPath := "/tmp/vid.mp4"
+		zipPath := "/tmp/zip1.zip"
+
+		fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(localPath, nil)
+		vg.EXPECT().Download(gomock.Any(), videoKey).Return(io.NopCloser(strings.NewReader("data")), nil)
+		fm.EXPECT().WriteToFile(gomock.Any(), localPath, gomock.Any()).Return(nil)
+		vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(nil)
+		// input has frame_rate=0 (sanitize to 1.0) and output_format="JPG" (lowercase to "jpg")
+		vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "jpg").Return([]string{"f1.jpg"}, 1, zipPath, nil)
+		fm.EXPECT().ReadFile(gomock.Any(), zipPath).Return(io.NopCloser(bytes.NewBufferString("zip")), nil)
+		fm.EXPECT().GetFileSize(gomock.Any(), zipPath).Return(int64(3), nil)
+		vg.EXPECT().Upload(gomock.Any(), "processed/vid_frames.zip", gomock.Any(), "application/zip", int64(3)).Return("processed/vid_frames.zip", nil)
+		vg.EXPECT().Delete(gomock.Any(), videoKey).Return(nil)
+		fm.EXPECT().DeleteFile(gomock.Any(), localPath).Return(nil)
+		fm.EXPECT().DeleteFile(gomock.Any(), zipPath).Return(nil)
+
+		in := dto.ProcessVideoInput{VideoKey: videoKey, Configuration: &dto.ProcessingConfigInput{FrameRate: 0, OutputFormat: "JPG"}}
+		out, err := uc.ProcessVideo(context.Background(), in)
+		require.NoError(t, err)
+		require.True(t, out.Success)
+		require.Equal(t, 1, out.FrameCount)
+	})
 }

@@ -31,9 +31,9 @@ func NewFFmpegService(fileManager port.FileManager) port.VideoProcessor {
 
 // ProcessVideo processes video and extracts frames using FFmpeg
 func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, frameRate float64, outputFormat string) ([]string, int, string, error) {
-	// Sanitize inputs
+	// Validate inputs
 	if frameRate <= 0 {
-		frameRate = 1.0
+		return nil, 0, "", fmt.Errorf("invalid frame rate: %v", frameRate)
 	}
 	// Create temporary directory for frames
 	tempDir, err := s.fileManager.CreateTempDir(ctx, "frames_")
