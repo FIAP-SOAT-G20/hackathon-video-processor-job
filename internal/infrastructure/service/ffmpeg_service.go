@@ -13,6 +13,12 @@ import (
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port"
 )
 
+const (
+	// DefaultJPEGQuality defines the quality level for JPEG output (1-31, lower = better quality)
+	// Value 2 provides high quality with reasonable file size
+	DefaultJPEGQuality = "2"
+)
+
 type FFmpegService struct {
 	fileManager port.FileManager
 }
@@ -82,7 +88,8 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 
 	// Check if we got packet count (indicates valid video stream)
 	packetCount := strings.TrimSpace(string(output))
-	if packetCount == "" || packetCount == "0" {
+	// Empty output indicates no video stream, but 0 packets can be valid for very short videos
+	if packetCount == "" {
 		return fmt.Errorf("video file contains no valid video stream")
 	}
 
@@ -98,7 +105,7 @@ func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, fra
 	case "png":
 		// keep
 	case "webp":
-		// optional future support, default to png for now
+		// WebP format is not currently supported, defaulting to PNG
 		ext = "png"
 	default:
 		// default to png
@@ -116,8 +123,8 @@ func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, fra
 		framePattern,
 	}
 	if ext == "jpg" {
-		// better quality for jpg outputs
-		args = []string{"-hide_banner", "-i", videoPath, "-vf", fmt.Sprintf("fps=%f", frameRate), "-qscale:v", "2", "-y", framePattern}
+		// Apply high quality setting for JPEG outputs
+		args = []string{"-hide_banner", "-i", videoPath, "-vf", fmt.Sprintf("fps=%f", frameRate), "-qscale:v", DefaultJPEGQuality, "-y", framePattern}
 	}
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
