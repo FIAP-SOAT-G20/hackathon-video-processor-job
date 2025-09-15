@@ -72,11 +72,7 @@ func (w *bddWorld) theResponseJSONHasFieldEqualTo(field string, value string) er
 	_ = json.Unmarshal([]byte(m["body"].(string)), &body)
 
 	// Trim surrounding quotes if present
-	if len(value) >= 2 {
-		if (value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'') {
-			value = value[1 : len(value)-1]
-		}
-	}
+	value = strings.Trim(value, `"'`)
 
 	// Normalize expected value
 	var expectedAny any
