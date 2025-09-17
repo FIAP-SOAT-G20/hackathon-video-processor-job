@@ -13,7 +13,7 @@ func NewVideoJsonPresenter() port.Presenter {
 	return &videoJsonPresenter{}
 }
 
-func (p *videoJsonPresenter) PresentProcessVideoOutput(output *dto.ProcessVideoOutput) []byte {
+func (p *videoJsonPresenter) PresentProcessVideoOutput(output *dto.ProcessVideoOutput) ([]byte, error) {
 	response := VideoJsonResponse{
 		Success:    output.Success,
 		Message:    output.Message,
@@ -23,17 +23,15 @@ func (p *videoJsonPresenter) PresentProcessVideoOutput(output *dto.ProcessVideoO
 		Error:      output.Error,
 	}
 
-	result, _ := json.Marshal(response)
-	return result
+	return json.Marshal(response)
 }
 
-func (p *videoJsonPresenter) PresentError(err error) []byte {
+func (p *videoJsonPresenter) PresentError(err error) ([]byte, error) {
 	response := VideoJsonResponse{
 		Success: false,
 		Message: "Processing failed",
 		Error:   err.Error(),
 	}
 
-	result, _ := json.Marshal(response)
-	return result
+	return json.Marshal(response)
 }

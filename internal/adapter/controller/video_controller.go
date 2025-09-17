@@ -29,9 +29,19 @@ func (c *videoController) ProcessVideo(ctx context.Context, input dto.ProcessVid
 	output, err := c.videoUseCase.ProcessVideo(ctx, input)
 	if err != nil {
 		log.Error("Video processing failed", "error", err)
-		return c.presenter.PresentError(err), err
+		b, pErr := c.presenter.PresentError(err)
+		if pErr != nil {
+			log.Error("Failed to marshal error response", "error", pErr)
+			return nil, pErr
+		}
+		return b, err
 	}
 
 	log.Info("Video processing completed successfully", "success", output.Success, "frame_count", output.FrameCount)
-	return c.presenter.PresentProcessVideoOutput(output), nil
+	b, pErr := c.presenter.PresentProcessVideoOutput(output)
+	if pErr != nil {
+		log.Error("Failed to marshal success response", "error", pErr)
+		return nil, pErr
+	}
+	return b, nil
 }

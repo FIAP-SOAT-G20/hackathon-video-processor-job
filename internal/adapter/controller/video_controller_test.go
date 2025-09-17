@@ -30,7 +30,7 @@ func TestVideoController(t *testing.T) {
 		prBytes := []byte(`{"success":true}`)
 
 		uc.EXPECT().ProcessVideo(gomock.Any(), input).Return(out, nil)
-		pr.EXPECT().PresentProcessVideoOutput(out).Return(prBytes)
+		pr.EXPECT().PresentProcessVideoOutput(out).Return(prBytes, nil)
 
 		res, err := c.ProcessVideo(context.Background(), input)
 
@@ -54,7 +54,7 @@ func TestVideoController(t *testing.T) {
 		prBytes := []byte(`{"success":false}`)
 
 		uc.EXPECT().ProcessVideo(gomock.Any(), input).Return(nil, errBoom)
-		pr.EXPECT().PresentError(errBoom).Return(prBytes)
+		pr.EXPECT().PresentError(errBoom).Return(prBytes, nil)
 
 		res, err := c.ProcessVideo(context.Background(), input)
 		r.Error(err)

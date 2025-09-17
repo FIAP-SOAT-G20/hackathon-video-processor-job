@@ -20,10 +20,10 @@ func TestVideoJsonPresenter(t *testing.T) {
 			OutputKey:  "processed/foo_frames.zip",
 			FrameCount: 42,
 		}
-		b := p.PresentProcessVideoOutput(out)
+		b, err := p.PresentProcessVideoOutput(out)
+		require.NoError(t, err)
 		var m map[string]any
-		err := json.Unmarshal(b, &m)
-		r.NoError(err)
+		r.NoError(json.Unmarshal(b, &m))
 		r.Equal(true, m["success"])
 		r.Equal("ok", m["message"])
 		r.Equal("processed/foo_frames.zip", m["output_key"])
@@ -33,10 +33,10 @@ func TestVideoJsonPresenter(t *testing.T) {
 	t.Run("PresentError", func(t *testing.T) {
 		r := require.New(t)
 		p := NewVideoJsonPresenter()
-		b := p.PresentError(errors.New("boom"))
+		b, err := p.PresentError(errors.New("boom"))
+		require.NoError(t, err)
 		var m map[string]any
-		err := json.Unmarshal(b, &m)
-		r.NoError(err)
+		r.NoError(json.Unmarshal(b, &m))
 		r.Equal(false, m["success"])
 		r.Equal("Processing failed", m["message"])
 		r.NotEmpty(m["error"])
