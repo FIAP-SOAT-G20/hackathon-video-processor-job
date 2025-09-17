@@ -19,6 +19,7 @@ func (p *videoJsonPresenter) PresentProcessVideoOutput(output *dto.ProcessVideoO
 		Message:    output.Message,
 		OutputKey:  output.OutputKey,
 		FrameCount: output.FrameCount,
+		Hash:       output.Hash,
 		Error:      output.Error,
 	}
 

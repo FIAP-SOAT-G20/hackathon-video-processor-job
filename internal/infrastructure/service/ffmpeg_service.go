@@ -100,19 +100,10 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 }
 
 func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, frameRate float64, outputFormat string, outputDir string) ([]string, error) {
-	// normalize/sanitize output format
+	// Expect normalized output format from upper layers; do not normalize here to avoid duplication
 	ext := outputFormat
-	switch ext {
-	case "jpg", "jpeg":
-		ext = "jpg"
-	case "png":
-		// keep
-	case "webp":
-		// WebP format is not currently supported, defaulting to PNG
-		ext = "png"
-	default:
-		// default to png
-		ext = "png"
+	if ext != "jpg" && ext != "png" {
+		return nil, fmt.Errorf("unsupported output format: %q", outputFormat)
 	}
 
 	framePattern := filepath.Join(outputDir, fmt.Sprintf("frame_%%04d.%s", ext))
@@ -136,8 +127,7 @@ func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, fra
 			"-frame_pts", "1",
 			framePattern,
 		}
-	} else {
-		// PNG output (default) - robust settings similar to JPG
+	} else { // png
 		args = []string{
 			"-nostdin",
 			"-loglevel", "error",

@@ -55,6 +55,16 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 	// Step 2: Configure processing parameters
 	cfg := uc.configureProcessing(input.Configuration, log)
 
+	// Fail-fast: unsupported output_format
+	if cfg.OutputFormat != "jpg" && cfg.OutputFormat != "png" {
+		invErr := domain.NewInvalidInputError(fmt.Sprintf("unsupported output_format: %q (allowed: jpg, png)", cfg.OutputFormat))
+		return &dto.ProcessVideoOutput{
+			Success: false,
+			Message: "Processing failed",
+			Error:   invErr.Error(),
+		}, invErr
+	}
+
 	// Step 3: Extract frames from video
 	frameCount, zipPath, err := uc.extractFrames(ctx, localVideoPath, cfg)
 	if err != nil {
@@ -218,10 +228,14 @@ func (uc *videoUseCase) configureProcessing(inputConfig *dto.ProcessingConfigInp
 	if cfg.FrameRate <= 0 {
 		cfg.FrameRate = 1.0
 	}
+	// Normalize output format centrally here (no fallback here; fail-fast happens in ProcessVideo)
+	cfg.OutputFormat = strings.ToLower(strings.TrimSpace(cfg.OutputFormat))
+	if cfg.OutputFormat == "jpeg" {
+		cfg.OutputFormat = "jpg"
+	}
 	if cfg.OutputFormat == "" {
 		cfg.OutputFormat = "png"
 	}
-	cfg.OutputFormat = strings.ToLower(strings.TrimSpace(cfg.OutputFormat))
 
 	return cfg
 }
