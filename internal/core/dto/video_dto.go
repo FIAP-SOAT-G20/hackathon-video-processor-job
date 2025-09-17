@@ -18,5 +18,6 @@ type ProcessVideoOutput struct {
 	Message    string
 	OutputKey  string
 	FrameCount int
+	Hash       string
 	Error      string
 }

@@ -39,8 +39,37 @@ func (w *bddWorld) iHaveLambdaEventWithVideoKey(key string) error {
 	return nil
 }
 
+func (w *bddWorld) iHaveLambdaEventWithVideoKeyAndConfiguration(key string, frameRate float64, outputFormat string) error {
+	w.payload = map[string]any{
+		"video_key": key,
+		"configuration": map[string]any{
+			"frame_rate":    frameRate,
+			"output_format": outputFormat,
+		},
+	}
+	return nil
+}
+
 func (w *bddWorld) theControllerReturnsSuccess(frameCount int, outputKey string) error {
 	body := fmt.Sprintf(`{"success":true,"message":"ok","frame_count":%d,"output_key":"%s"}`, frameCount, outputKey)
+	w.ctrlStub.resp = []byte(body)
+	w.ctrlStub.err = nil
+	return nil
+}
+
+func (w *bddWorld) theControllerReturnsSuccessWithHash(frameCount int, outputKey string, hash string) error {
+	body := fmt.Sprintf(`{"success":true,"message":"ok","frame_count":%d,"output_key":"%s","hash":"%s"}`, frameCount, outputKey, hash)
+	w.ctrlStub.resp = []byte(body)
+	w.ctrlStub.err = nil
+	return nil
+}
+
+func (w *bddWorld) theControllerReturnsSuccessWithSanitizedConfig(frameRate float64, format string, frameCount int) error {
+	// Generate a mock hash for the response
+	hash := "abc123sanitized456def"
+	outputKey := fmt.Sprintf("processed/%s.zip", hash)
+	body := fmt.Sprintf(`{"success":true,"message":"Config sanitized: frame_rate %.1f, format %s","frame_count":%d,"output_key":"%s","hash":"%s"}`,
+		frameRate, format, frameCount, outputKey, hash)
 	w.ctrlStub.resp = []byte(body)
 	w.ctrlStub.err = nil
 	return nil
@@ -107,6 +136,34 @@ func (w *bddWorld) theResponseJSONHasFieldEqualTo(field string, value string) er
 		}
 	default:
 		return fmt.Errorf("unsupported value type")
+	}
+	return nil
+}
+
+func (w *bddWorld) theResponseJSONHasFieldContains(field string, substring string) error {
+	m := map[string]any{}
+	b, _ := json.Marshal(w.resp)
+	_ = json.Unmarshal(b, &m)
+	body := map[string]any{}
+	_ = json.Unmarshal([]byte(m["body"].(string)), &body)
+
+	got := body[field].(string)
+	if !strings.Contains(got, substring) {
+		return fmt.Errorf("%s expected to contain '%s' but got '%s'", field, substring, got)
+	}
+	return nil
+}
+
+func (w *bddWorld) theResponseJSONHasFieldIsNotEmpty(field string) error {
+	m := map[string]any{}
+	b, _ := json.Marshal(w.resp)
+	_ = json.Unmarshal(b, &m)
+	body := map[string]any{}
+	_ = json.Unmarshal([]byte(m["body"].(string)), &body)
+
+	got := body[field].(string)
+	if got == "" {
+		return fmt.Errorf("%s expected to not be empty but was empty", field)
 	}
 	return nil
 }
