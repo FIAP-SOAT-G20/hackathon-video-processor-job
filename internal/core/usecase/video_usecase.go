@@ -9,7 +9,7 @@ import (
 	"io"
 	"strings"
 
-	domain "github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
+	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/domain/entity"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/dto"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port"
@@ -224,19 +224,13 @@ func (uc *videoUseCase) configureProcessing(inputConfig *dto.ProcessingConfigInp
 		log.Info("Using custom configuration", "frame_rate", cfg.FrameRate, "output_format", cfg.OutputFormat)
 	}
 
-	// Sanitize config
 	if cfg.FrameRate <= 0 {
 		cfg.FrameRate = 1.0
 	}
-	// Normalize output format centrally here (no fallback here; fail-fast happens in ProcessVideo)
 	cfg.OutputFormat = strings.ToLower(strings.TrimSpace(cfg.OutputFormat))
 	if cfg.OutputFormat == "jpeg" {
 		cfg.OutputFormat = "jpg"
 	}
-	if cfg.OutputFormat == "" {
-		cfg.OutputFormat = "png"
-	}
-
 	return cfg
 }
 

@@ -100,18 +100,10 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 }
 
 func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, frameRate float64, outputFormat string, outputDir string) ([]string, error) {
-	// Expect normalized output format from upper layers; do not normalize here to avoid duplication
-	ext := outputFormat
-	if ext != "jpg" && ext != "png" {
-		return nil, fmt.Errorf("unsupported output format: %q", outputFormat)
-	}
+	framePattern := filepath.Join(outputDir, fmt.Sprintf("frame_%%04d.%s", outputFormat))
 
-	framePattern := filepath.Join(outputDir, fmt.Sprintf("frame_%%04d.%s", ext))
-
-	// Build FFmpeg command based on output format
 	var args []string
-	if ext == "jpg" {
-		// JPEG output with robust settings (no -vsync/-r to avoid conflicts)
+	if outputFormat == "jpg" {
 		args = []string{
 			"-nostdin",
 			"-loglevel", "error",
@@ -150,8 +142,7 @@ func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, fra
 		return nil, fmt.Errorf("ffmpeg failed: %w\nOutput: %s", err, string(output))
 	}
 
-	// List extracted frame files
-	pattern := fmt.Sprintf("*.%s", ext)
+	pattern := fmt.Sprintf("*.%s", outputFormat)
 	framePaths, err := s.fileManager.ListFiles(ctx, outputDir, pattern)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list frame files: %w", err)
@@ -159,7 +150,6 @@ func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, fra
 
 	return framePaths, nil
 }
-
 func (s *FFmpegService) createZipFromFiles(files []string, outputPath string) error {
 	// Create output file
 	zipFile, err := os.Create(outputPath)
