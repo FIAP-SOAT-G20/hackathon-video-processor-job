@@ -220,4 +220,120 @@ func TestVideoUseCase(t *testing.T) {
 		require.Equal(t, "processed/"+out.Hash+".zip", out.OutputKey)
 		// Test that sanitization worked: frame_rate=0 -> 1.0, JPG -> jpg
 	})
+
+	// Unsupported format should fail fast
+	t.Run("UnsupportedFormat_FailFast", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		vg := pmocks.NewMockVideoGateway(ctrl)
+		vp := pmocks.NewMockVideoProcessor(ctrl)
+		fm := pmocks.NewMockFileManager(ctrl)
+		log := logger.NewSlogLogger()
+		uc := NewVideoUseCase(vg, vp, fm, log)
+
+		local := "/tmp/unsupported.mp4"
+		fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(local, nil)
+		vg.EXPECT().Download(gomock.Any(), "vid.mp4").Return(io.NopCloser(strings.NewReader("x")), nil)
+		fm.EXPECT().WriteToFile(gomock.Any(), local, gomock.Any()).Return(nil)
+		vp.EXPECT().ValidateVideo(gomock.Any(), local).Return(nil)
+		// cleanup of temp local file due to fail-fast
+		fm.EXPECT().DeleteFile(gomock.Any(), local).Return(nil)
+
+		in := dto.ProcessVideoInput{
+			VideoKey:      "vid.mp4",
+			Configuration: &dto.ProcessingConfigInput{FrameRate: 1.0, OutputFormat: "webp"},
+		}
+		out, err := uc.ProcessVideo(context.Background(), in)
+		var inv *domain.InvalidInputError
+		require.ErrorAs(t, err, &inv)
+		require.False(t, out.Success)
+	})
+
+	// ReadFile error during upload path
+	t.Run("ReadFileError_OnUpload", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		vg := pmocks.NewMockVideoGateway(ctrl)
+		vp := pmocks.NewMockVideoProcessor(ctrl)
+		fm := pmocks.NewMockFileManager(ctrl)
+		log := logger.NewSlogLogger()
+		uc := NewVideoUseCase(vg, vp, fm, log)
+
+		local := "/tmp/video.mp4"
+		zip := "/tmp/frames.zip"
+		fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(local, nil)
+		vg.EXPECT().Download(gomock.Any(), "foo").Return(io.NopCloser(strings.NewReader("x")), nil)
+		fm.EXPECT().WriteToFile(gomock.Any(), local, gomock.Any()).Return(nil)
+		vp.EXPECT().ValidateVideo(gomock.Any(), local).Return(nil)
+		vp.EXPECT().ProcessVideo(gomock.Any(), local, 1.0, "png").Return(1, zip, nil)
+
+		fm.EXPECT().ReadFile(gomock.Any(), zip).Return(nil, errors.New("read error"))
+		fm.EXPECT().DeleteFile(gomock.Any(), local).Return(nil)
+		fm.EXPECT().DeleteFile(gomock.Any(), zip).Return(nil)
+
+		_, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: "foo"})
+		require.Error(t, err)
+	})
+
+	// Upload error path
+	t.Run("UploadError", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		vg := pmocks.NewMockVideoGateway(ctrl)
+		vp := pmocks.NewMockVideoProcessor(ctrl)
+		fm := pmocks.NewMockFileManager(ctrl)
+		log := logger.NewSlogLogger()
+		uc := NewVideoUseCase(vg, vp, fm, log)
+
+		local := "/tmp/video.mp4"
+		zip := "/tmp/frames.zip"
+		fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(local, nil)
+		vg.EXPECT().Download(gomock.Any(), "foo").Return(io.NopCloser(strings.NewReader("x")), nil)
+		fm.EXPECT().WriteToFile(gomock.Any(), local, gomock.Any()).Return(nil)
+		vp.EXPECT().ValidateVideo(gomock.Any(), local).Return(nil)
+		vp.EXPECT().ProcessVideo(gomock.Any(), local, 1.0, "png").Return(1, zip, nil)
+
+		rc := io.NopCloser(strings.NewReader("zip"))
+		fm.EXPECT().ReadFile(gomock.Any(), zip).Return(rc, nil)
+		fm.EXPECT().GetFileSize(gomock.Any(), zip).Return(int64(3), nil)
+		vg.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any(), "application/zip", int64(3)).Return("", errors.New("upload error"))
+		fm.EXPECT().DeleteFile(gomock.Any(), local).Return(nil)
+		fm.EXPECT().DeleteFile(gomock.Any(), zip).Return(nil)
+
+		_, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: "foo"})
+		require.Error(t, err)
+	})
+
+	// JPEG normalization: "jpeg" -> "jpg"
+	t.Run("JPEGNormalization", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		vg := pmocks.NewMockVideoGateway(ctrl)
+		vp := pmocks.NewMockVideoProcessor(ctrl)
+		fm := pmocks.NewMockFileManager(ctrl)
+		log := logger.NewSlogLogger()
+		uc := NewVideoUseCase(vg, vp, fm, log)
+
+		local := "/tmp/video.mp4"
+		zip := "/tmp/frames.zip"
+		fm.EXPECT().CreateTempFile(gomock.Any(), "video_", ".mp4").Return(local, nil)
+		vg.EXPECT().Download(gomock.Any(), "vid.mp4").Return(io.NopCloser(strings.NewReader("x")), nil)
+		fm.EXPECT().WriteToFile(gomock.Any(), local, gomock.Any()).Return(nil)
+		vp.EXPECT().ValidateVideo(gomock.Any(), local).Return(nil)
+		vp.EXPECT().ProcessVideo(gomock.Any(), local, 1.0, "jpg").Return(1, zip, nil)
+		fm.EXPECT().ReadFile(gomock.Any(), zip).Return(io.NopCloser(strings.NewReader("zip")), nil)
+		fm.EXPECT().GetFileSize(gomock.Any(), zip).Return(int64(3), nil)
+		vg.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any(), "application/zip", int64(3)).DoAndReturn(
+			func(ctx context.Context, key string, r io.Reader, ct string, n int64) (string, error) {
+				return key, nil
+			})
+		vg.EXPECT().Delete(gomock.Any(), "vid.mp4").Return(nil)
+		fm.EXPECT().DeleteFile(gomock.Any(), local).Return(nil)
+		fm.EXPECT().DeleteFile(gomock.Any(), zip).Return(nil)
+
+		in := dto.ProcessVideoInput{VideoKey: "vid.mp4", Configuration: &dto.ProcessingConfigInput{FrameRate: 1.0, OutputFormat: "jpeg"}}
+		out, err := uc.ProcessVideo(context.Background(), in)
+		require.NoError(t, err)
+		require.True(t, out.Success)
+	})
 }
