@@ -39,9 +39,7 @@ Thumbs.db
 # Build artifacts
 bin/
 dist/
-bootstrap
-main
-function.zip
+video-processor-job
 
 # Logs
 *.log
@@ -63,9 +61,6 @@ test-output/
 # AWS related
 .aws/
 aws-config/
-
-# Lambda deployment artifacts
-*.zip
 
 # Coverage reports
 coverage.html

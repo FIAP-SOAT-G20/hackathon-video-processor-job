@@ -10,15 +10,15 @@ import (
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port"
 )
 
-// LocalFileService implements file operations for Lambda execution environment
+// LocalFileService implements file operations for containerized execution environment
 type LocalFileService struct {
 	tempDir string
 }
 
 // NewLocalFileService creates a new local file service
 func NewLocalFileService() port.FileManager {
-	tempDir := "/tmp" // Lambda temp directory
-	if os.Getenv("LAMBDA_RUNTIME_DIR") == "" {
+	tempDir := "/tmp" // Container temp directory
+	if runtime := os.Getenv("CONTAINER_RUNTIME"); runtime == "" {
 		// Running locally, use system temp
 		tempDir = os.TempDir()
 	}

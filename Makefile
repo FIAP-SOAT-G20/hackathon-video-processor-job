@@ -8,7 +8,6 @@ DOCKER_REGISTRY_APP=fiap-soat-g20/hackathon-video-processor-job
 VERSION=$(shell git describe --tags --always --dirty)
 TEST_PATH=./internal/...
 TEST_COVERAGE_FILE_NAME=coverage.out
-LAMBDA_ZIP_FILE=function.zip
 
 # Go commands
 GOCMD=go
@@ -61,15 +60,9 @@ lint-ci: ## Run golangci-lint (like example project)
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.7 run --out-format colored-line-number
 
 .PHONY: build
-build: fmt ## Build the Lambda function
-	@echo "🟢 Building the Lambda function..."
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GOBUILD) -ldflags="-s -w" -o bootstrap $(MAIN_FILE)
-
-.PHONY: build-lambda
-build-lambda: build ## Build Lambda deployment package
-	@echo "🟢 Creating Lambda deployment package..."
-	@zip -r $(LAMBDA_ZIP_FILE) bootstrap
-	@echo "Lambda package created: $(LAMBDA_ZIP_FILE)"
+build: fmt ## Build the video processor job
+	@echo "🟢 Building the video processor job..."
+	$(GOBUILD) -ldflags="-s -w" -o video-processor-job ./cmd/video-processor-job
 
 .PHONY: test
 test: lint ## Run tests
@@ -96,10 +89,6 @@ coverage-check: unit-test ## Fail if coverage < 80%
 	fi; \
 	awk -v p="$$total_cov" 'BEGIN { if (p + 0 < 80) { printf "Coverage is %.2f%% (< 80%%)\n", p; exit 1 } else { printf "Coverage is %.2f%% (>= 80%%)\n", p; exit 0 } }'
 
-.PHONY: bdd-test
-bdd-test: ## Run BDD tests with Godog
-	@echo "🟢 Running BDD tests..."
-	cd tests/bdd && go run github.com/cucumber/godog/cmd/godog@v0.15.1 run ../features --format=pretty
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with coverage
@@ -125,20 +114,18 @@ test-integration: ## Run integration tests (requires AWS credentials)
 clean: ## Clean up binaries and coverage files
 	@echo "🔴 Cleaning up..."
 	$(GOCLEAN)
-	rm -f bootstrap
-	rm -f $(LAMBDA_ZIP_FILE)
+	rm -f video-processor-job
 	rm -f $(TEST_COVERAGE_FILE_NAME)
 
 .PHONY: run
 run: build ## Run locally (for testing)
 	@echo "🟢 Running locally..."
-	./bootstrap
+	./video-processor-job
 
 .PHONY: docker-build
-docker-build: ## Build Docker image for Lambda
-	@echo "🟢 Building Docker image for Lambda..."
-	docker build --platform linux/amd64 -t $(DOCKER_REGISTRY)/$(DOCKER_REGISTRY_APP):$(VERSION) .
-	docker tag $(DOCKER_REGISTRY)/$(DOCKER_REGISTRY_APP):$(VERSION) $(DOCKER_REGISTRY)/$(DOCKER_REGISTRY_APP):latest
+docker-build: ## Build Docker image for Kubernetes job
+	@echo "🟢 Building Docker image for Kubernetes job..."
+	docker build -t video-processor-job .
 
 .PHONY: docker-push
 docker-push: ## Push Docker image
@@ -149,47 +136,12 @@ docker-push: ## Push Docker image
 .PHONY: docker-run
 docker-run: docker-build ## Run Docker container locally
 	@echo "🟢 Running Docker container locally..."
-	docker run --rm -p 9000:8080 \
-		-e VIDEO_BUCKET=test-video-bucket \
-		-e PROCESSED_BUCKET=test-processed-bucket \
-		$(DOCKER_REGISTRY)/$(DOCKER_REGISTRY_APP):latest
+	docker run --rm \
+		-e K8S_JOB_ENV_VIDEO_KEY=videos/test.mp4 \
+		-e K8S_JOB_ENV_VIDEO_BUCKET=test-video-bucket \
+		-e K8S_JOB_ENV_PROCESSED_BUCKET=test-processed-bucket \
+		video-processor-job
 
-.PHONY: lambda-deploy
-lambda-deploy: build-lambda ## Deploy to AWS Lambda (requires AWS CLI)
-	@echo "🟢 Deploying to AWS Lambda..."
-	aws lambda update-function-code \
-		--function-name $(FUNCTION_NAME) \
-		--zip-file fileb://$(LAMBDA_ZIP_FILE) \
-		--region $(AWS_REGION)
-
-.PHONY: lambda-create
-lambda-create: build-lambda ## Create AWS Lambda function
-	@echo "🟢 Creating AWS Lambda function..."
-	aws lambda create-function \
-		--function-name $(FUNCTION_NAME) \
-		--runtime provided.al2 \
-		--role arn:aws:iam::YOUR_ACCOUNT:role/lambda-execution-role \
-		--handler bootstrap \
-		--zip-file fileb://$(LAMBDA_ZIP_FILE) \
-		--timeout 900 \
-		--memory-size 1024 \
-		--region $(AWS_REGION)
-
-.PHONY: lambda-invoke
-lambda-invoke: ## Test Lambda function
-	@echo "🟢 Testing Lambda function..."
-	aws lambda invoke \
-		--function-name $(FUNCTION_NAME) \
-		--payload '{"video_key": "test-video.mp4"}' \
-		--region $(AWS_REGION) \
-		response.json
-	@cat response.json
-	@rm response.json
-
-.PHONY: lambda-logs
-lambda-logs: ## View Lambda function logs
-	@echo "🟢 Viewing Lambda function logs..."
-	aws logs tail /aws/lambda/$(FUNCTION_NAME) --follow
 
 .PHONY: mock
 mock: ## Generate mocks (uber mockgen)
