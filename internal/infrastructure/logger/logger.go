@@ -61,12 +61,21 @@ func (l *SlogLogger) With(args ...any) Logger {
 // WithContext returns a new logger with context
 func (l *SlogLogger) WithContext(ctx context.Context) Logger {
 	return &SlogLogger{
-		logger: l.logger.With("trace_id", getTraceIDFromContext(ctx)),
+		logger: l.logger.With("trace_id", GetTraceIDFromContext(ctx)),
 	}
 }
 
-func getTraceIDFromContext(ctx context.Context) string {
-	if traceID := ctx.Value("trace_id"); traceID != nil {
+// typed key to avoid context key collisions
+type traceIDKey struct{}
+
+// SetTraceIDOnContext returns a new context with the given trace id stored safely.
+func SetTraceIDOnContext(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, traceIDKey{}, id)
+}
+
+// GetTraceIDFromContext retrieves a trace id from context in a type-safe way.
+func GetTraceIDFromContext(ctx context.Context) string {
+	if traceID := ctx.Value(traceIDKey{}); traceID != nil {
 		if id, ok := traceID.(string); ok {
 			return id
 		}

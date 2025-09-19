@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -52,12 +54,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize logger
-	logger := logger.NewSlogLogger()
+	// Initialize context with trace id, then logger
+	ctx := context.Background()
+	traceID := generateTraceID()
+	ctx = logger.SetTraceIDOnContext(ctx, traceID)
+
+	logger := logger.NewSlogLogger().With("trace_id", traceID)
 	logger.Info("Starting Video Processor standalone application")
 
 	// Initialize AWS config
-	ctx := context.Background()
 	logger.Info("Loading AWS configuration")
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -121,4 +126,13 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// generateTraceID creates a random 16-byte hex string for tracing
+func generateTraceID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "unknown"
+	}
+	return hex.EncodeToString(b)
 }
