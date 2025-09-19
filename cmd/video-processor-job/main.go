@@ -21,10 +21,10 @@ import (
 )
 
 func main() {
-	// Get configuration from environment variables
-	key := os.Getenv("KEY")                        // S3 key (path) of the video file
-	outputFormat := getEnv("OUTPUT_FORMAT", "jpg") // Output format (jpg or png)
-	frameRateStr := getEnv("FRAME_RATE", "1.0")    // Frame rate for extraction
+	// Get configuration from environment variables (K8s job format)
+	key := os.Getenv("K8S_JOB_ENV_VIDEO_KEY")                        // S3 key (path) of the video file
+	outputFormat := getEnv("K8S_JOB_ENV_VIDEO_EXPORT_FORMAT", "jpg") // Output format (jpg or png)
+	frameRateStr := getEnv("K8S_JOB_ENV_VIDEO_EXPORT_FPS", "1.0")    // Frame rate for extraction
 
 	// Parse frame rate
 	frameRate := 1.0
@@ -36,18 +36,18 @@ func main() {
 
 	if key == "" {
 		fmt.Println("Required environment variables:")
-		fmt.Println("  KEY=<s3-key-path>              # S3 key of the video file")
-		fmt.Println("  VIDEO_BUCKET=<bucket-name>     # S3 bucket for input videos")
-		fmt.Println("  PROCESSED_BUCKET=<bucket-name> # S3 bucket for output files")
+		fmt.Println("  K8S_JOB_ENV_VIDEO_KEY=<s3-key-path>        # S3 key of the video file")
+		fmt.Println("  K8S_JOB_ENV_VIDEO_BUCKET=<bucket-name>     # S3 bucket for input videos")
+		fmt.Println("  K8S_JOB_ENV_PROCESSED_BUCKET=<bucket-name> # S3 bucket for output files")
 		fmt.Println("")
 		fmt.Println("Optional environment variables:")
-		fmt.Println("  OUTPUT_FORMAT=jpg|png          # Output format (default: jpg)")
-		fmt.Println("  FRAME_RATE=1.0                 # Frame extraction rate (default: 1.0)")
+		fmt.Println("  K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg|png    # Output format (default: jpg)")
+		fmt.Println("  K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0           # Frame extraction rate (default: 1.0)")
 		fmt.Println("")
 		fmt.Println("Example:")
-		fmt.Println("  export KEY=videos/sample.mp4")
-		fmt.Println("  export OUTPUT_FORMAT=jpg")
-		fmt.Println("  export FRAME_RATE=2.0")
+		fmt.Println("  export K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4")
+		fmt.Println("  export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg")
+		fmt.Println("  export K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0")
 		fmt.Println("  ./video-processor-job")
 		os.Exit(1)
 	}
@@ -69,8 +69,8 @@ func main() {
 	s3Client := s3.NewFromConfig(cfg)
 
 	// Get bucket names from environment variables
-	videoBucket := getEnv("VIDEO_BUCKET", "video-processor-raw-videos")
-	processedBucket := getEnv("PROCESSED_BUCKET", "video-processor-processed-images")
+	videoBucket := getEnv("K8S_JOB_ENV_VIDEO_BUCKET", "video-processor-raw-videos")
+	processedBucket := getEnv("K8S_JOB_ENV_PROCESSED_BUCKET", "video-processor-processed-images")
 	logger.Info("Environment configuration loaded", "video_bucket", videoBucket, "processed_bucket", processedBucket)
 
 	// Initialize infrastructure layer

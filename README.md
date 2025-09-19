@@ -2,7 +2,7 @@
 
 <p align="center">
     <img src="https://img.shields.io/badge/Code-Go-informational?style=flat-square&logo=go&color=00ADD8" alt="Go" />
-    <img src="https://img.shields.io/badge/Cloud-AWS_Lambda-informational?style=flat-square&logo=awslambda&color=FF9900" alt="AWS Lambda" />
+    <img src="https://img.shields.io/badge/Cloud-Kubernetes-informational?style=flat-square&logo=kubernetes&color=326CE5" alt="Kubernetes" />
     <img src="https://img.shields.io/badge/Storage-S3-informational?style=flat-square&logo=amazons3&color=569A31" alt="S3" />
     <img src="https://img.shields.io/badge/Tools-FFmpeg-informational?style=flat-square&logo=ffmpeg&color=007808" alt="FFmpeg" />
     <img src="https://img.shields.io/badge/Tools-Docker-informational?style=flat-square&logo=docker&color=2496ED" alt="Docker" />
@@ -11,9 +11,8 @@
 
 ## 💬 About
 
-Video processing service developed for the FIAP Hackathon that extracts frames from video files using FFmpeg. The
-service follows Clean Architecture principles and can run both as an AWS Lambda function or as a standalone application
-for local development and testing.
+Video processing job developed for the FIAP Hackathon that extracts frames from video files using FFmpeg. The service
+follows Clean Architecture principles and runs as a Kubernetes job for scalable video processing.
 
 ### Key Features
 
@@ -21,7 +20,7 @@ for local development and testing.
 - **Frame Extraction**: Uses FFmpeg to extract frames as PNG or JPG images (configurable)
 - **ZIP Compression**: Packages extracted frames into a downloadable ZIP file (uploaded to S3)
 - **S3 Integration**: Downloads videos from S3, uploads processed frames, and cleans up original files
-- **Dual Execution**: Runs as AWS Lambda function OR standalone application
+- **Kubernetes Job**: Runs as containerized Kubernetes job for scalable processing
 - **Docker Support**: Containerized deployment with FFmpeg included
 - **Clean Architecture**: Well-structured codebase following Clean Architecture principles
 
@@ -30,9 +29,8 @@ for local development and testing.
 This service implements Clean Architecture with the following layers:
 
 ```
-├── cmd/                        # Application entry points
-│   ├── lambda/main.go          # AWS Lambda entry point
-│   └── video-processor-job/main.go # Video processor job entry point
+├── cmd/
+│   └── video-processor-job/main.go # Kubernetes job entry point
 ├── internal/
 │   ├── core/                   # Business logic layer
 │   │   ├── domain/entity/      # Business entities
@@ -46,14 +44,13 @@ This service implements Clean Architecture with the following layers:
 │   └── infrastructure/         # External concerns
 │       ├── datasource/         # Data access implementations
 │       ├── service/            # External service implementations
-│       ├── aws/lambda/         # Lambda-specific handlers
 │       └── logger/             # Logging utilities
 ```
 
 ## 🔄 Processing Flow
 
-1. **Input**: Lambda receives event with video S3 key
-2. **Download**: Video file downloaded from S3 to Lambda's `/tmp` directory
+1. **Input**: Kubernetes job receives environment variables with video S3 key
+2. **Download**: Video file downloaded from S3 to container's `/tmp` directory
 3. **Validation**: Video format validation using FFprobe
 4. **Processing**: Frame extraction using FFmpeg at specified frame rate (default: 1 fps)
 5. **Compression**: Extracted frames packaged into ZIP file
@@ -69,18 +66,20 @@ This service implements Clean Architecture with the following layers:
 - FFmpeg (for local development)
 - AWS CLI configured
 - Docker (for containerized builds)
+- Kubernetes cluster access
 
 ### Environment Variables
 
 The application uses environment variables for configuration. See `.env.example` for a complete list.
 
 **Core Variables:**
+
 ```bash
-KEY=videos/sample.mp4                        # S3 key of video to process
-VIDEO_BUCKET=your-raw-video-bucket          # S3 bucket for input videos
-PROCESSED_BUCKET=your-processed-images-bucket # S3 bucket for output ZIP files
-OUTPUT_FORMAT=jpg                            # Output format (jpg or png)
-FRAME_RATE=1.0                              # Frame extraction rate
+K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4                  # S3 key of video to process
+K8S_JOB_ENV_VIDEO_BUCKET=your-raw-video-bucket          # S3 bucket for input videos
+K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-images-bucket # S3 bucket for output ZIP files
+K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg                      # Output format (jpg or png)
+K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0                         # Frame extraction rate
 ```
 
 ### Local Development
@@ -95,43 +94,30 @@ make test
 # Build video processor job binary
 go build -o video-processor-job ./cmd/video-processor-job
 
-# Build Lambda binary  
-go build -o lambda ./cmd/lambda
-
 # Run video processor job locally with environment variables
-export KEY=videos/sample.mp4
-export OUTPUT_FORMAT=jpg
-export FRAME_RATE=1.0
+export K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4
+export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg
+export K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0
 ./video-processor-job
 ```
 
-### Docker Builds
+### Docker Build
 
 ```bash
 # Build video processor job Docker image
 docker build -t video-processor-job .
 
-# Build Lambda Docker image
-docker build -f Dockerfile.lambda -t video-processor-lambda .
-```
-
-### Lambda Deployment
-
-```bash
-# Push Lambda image to ECR
-docker tag video-processor-lambda:latest $ECR_REPOSITORY:latest
+# Push to ECR for Kubernetes deployment
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPOSITORY
+docker tag video-processor-job:latest $ECR_REPOSITORY:latest
 docker push $ECR_REPOSITORY:latest
-
-# Update Lambda function
-aws lambda update-function-code --function-name video-processor \
-  --image-uri $ECR_REPOSITORY:latest
 ```
 
 ## Usage
 
 ### Video Processor Job
 
-Run the video processor as a standalone job application for local development and testing:
+Run the video processor job for local development, testing, or Kubernetes deployment:
 
 #### Command Line Usage
 
@@ -140,11 +126,11 @@ Run the video processor as a standalone job application for local development an
 go build -o video-processor-job ./cmd/video-processor-job
 
 # Set environment variables and run
-export KEY=videos/sample.mp4
-export OUTPUT_FORMAT=jpg
-export FRAME_RATE=1.0
-export VIDEO_BUCKET=your-raw-video-bucket
-export PROCESSED_BUCKET=your-processed-images-bucket
+export K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4
+export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg
+export K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0
+export K8S_JOB_ENV_VIDEO_BUCKET=your-raw-video-bucket
+export K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-images-bucket
 ./video-processor-job
 ```
 
@@ -156,11 +142,11 @@ docker build -t video-processor-job .
 
 # Run with Docker (requires AWS credentials)
 docker run --rm \
-  -e KEY=videos/sample.mp4 \
-  -e OUTPUT_FORMAT=jpg \
-  -e FRAME_RATE=2.0 \
-  -e VIDEO_BUCKET=your-raw-video-bucket \
-  -e PROCESSED_BUCKET=your-processed-images-bucket \
+  -e K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4 \
+  -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
+  -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0 \
+  -e K8S_JOB_ENV_VIDEO_BUCKET=your-raw-video-bucket \
+  -e K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-images-bucket
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
@@ -172,55 +158,23 @@ docker run --rm \
 
 **Required:**
 
-- `KEY`: S3 key (path) of the video file to process
-- `VIDEO_BUCKET`: S3 bucket name for input videos
-- `PROCESSED_BUCKET`: S3 bucket name for output files
+- `K8S_JOB_ENV_VIDEO_KEY`: S3 key (path) of the video file to process
+- `K8S_JOB_ENV_VIDEO_BUCKET`: S3 bucket name for input videos
+- `K8S_JOB_ENV_PROCESSED_BUCKET`: S3 bucket name for output files
 
 **Optional:**
 
-- `OUTPUT_FORMAT`: Output format (`jpg` or `png`, default: `jpg`)
-- `FRAME_RATE`: Frame extraction rate (default: `1.0`)
+- `K8S_JOB_ENV_VIDEO_EXPORT_FORMAT`: Output format (`jpg` or `png`, default: `jpg`)
+- `K8S_JOB_ENV_VIDEO_EXPORT_FPS`: Frame extraction rate (default: `1.0`)
 
 **AWS Credentials:**
 
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_DEFAULT_REGION`
-
-### AWS Lambda
-
-#### Lambda direct invocation payload
-
-Example:
-
-```json path=null start=null
-{
-  "video_key": "video.mp4",
-  "configuration": {
-    "frame_rate": 1.0,
-    "output_format": "png"
-  }
-}
-```
-
-Notes:
-- frame_rate: frames per second to extract. If missing or <= 0, defaults to 1.0.
-- output_format: one of png or jpg (jpeg). Case-insensitive. Unknown values default to png.
-- The service returns a ZIP with extracted frames uploaded under processed/<original>_frames.zip.
-
-### Lambda Event Format
-
-```json
-{
-  "video_key": "path/to/video.mp4",
-  "configuration": {
-    "frame_rate": 1.0,
-    "output_format": "png"
-  }
-}
-```
+- `K8S_JOB_ENV_AWS_ACCESS_KEY_ID`, `K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY`, `K8S_JOB_ENV_AWS_SESSION_TOKEN`,
+  `K8S_JOB_ENV_AWS_DEFAULT_REGION`
 
 ### Response Format
 
-Both standalone and Lambda versions return the same JSON response format:
+The video processor job returns the following JSON response format:
 
 ```json
 {
@@ -256,11 +210,11 @@ go build -o video-processor-job ./cmd/video-processor-job
 
 ```bash
 # Set all required environment variables
-export KEY=videos/my-video.mp4
-export OUTPUT_FORMAT=jpg
-export FRAME_RATE=2.0
-export VIDEO_BUCKET=my-raw-videos
-export PROCESSED_BUCKET=my-processed-images
+export K8S_JOB_ENV_VIDEO_KEY=videos/my-video.mp4
+export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg
+export K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0
+export K8S_JOB_ENV_VIDEO_BUCKET=my-raw-videos
+export K8S_JOB_ENV_PROCESSED_BUCKET=my-processed-images
 export AWS_ACCESS_KEY_ID=your-access-key
 export AWS_SECRET_ACCESS_KEY=your-secret-key
 export AWS_DEFAULT_REGION=us-east-1
@@ -287,11 +241,11 @@ docker run --rm --env-file .env video-processor-job
 
 ```bash
 docker run --rm \
-  -e KEY=videos/sample.mp4 \
-  -e OUTPUT_FORMAT=jpg \
-  -e FRAME_RATE=1.0 \
-  -e VIDEO_BUCKET=video-processor-raw-videos \
-  -e PROCESSED_BUCKET=video-processor-processed-images \
+  -e K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4 \
+  -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
+  -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0 \
+  -e K8S_JOB_ENV_VIDEO_BUCKET=video-processor-raw-videos \
+  -e K8S_JOB_ENV_PROCESSED_BUCKET=video-processor-processed-images
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
@@ -304,16 +258,16 @@ docker run --rm \
 ### Project Structure
 
 - **Domain Layer**: Pure business logic without external dependencies
-- **Application Layer**: Use cases orchestrating business workflows  
+- **Application Layer**: Use cases orchestrating business workflows
 - **Interface Layer**: Controllers, presenters, and gateways
 - **Infrastructure Layer**: External services, databases, and frameworks
 
 ### Key Components
 
 - **VideoProcessor**: FFmpeg integration for frame extraction
-- **FileManager**: Temporary file management in Lambda environment
+- **FileManager**: Temporary file management in container environment
 - **StorageDataSource**: S3 operations for video and frame storage
-- **VideoController**: Lambda event handling and response formatting
+- **VideoController**: Environment variable processing and response formatting
 
 ## 🧪 Testing
 
@@ -361,11 +315,10 @@ Required repository secrets:
 
 Images are tagged as `latest` and `${{ github.sha }}`.
 
-### Docker Containers
-
-The project provides two Docker configurations:
+### Docker Container
 
 #### Video Processor Job Container
+
 ```bash
 # Build video processor job image (Alpine Linux base)
 docker build -t video-processor-job .
@@ -373,34 +326,22 @@ docker build -t video-processor-job .
 # Run video processor job container
 docker run --rm \
   -v ~/.aws:/root/.aws \
-  -e KEY=videos/test.mp4 \
-  -e OUTPUT_FORMAT=jpg \
-  -e FRAME_RATE=1.0 \
-  -e VIDEO_BUCKET=your-bucket \
-  -e PROCESSED_BUCKET=your-processed-bucket \
+  -e K8S_JOB_ENV_VIDEO_KEY=videos/test.mp4 \
+  -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
+  -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0 \
+  -e K8S_JOB_ENV_VIDEO_BUCKET=your-bucket \
+  -e K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-bucket \
   video-processor-job
 ```
 
-#### Lambda Container
+#### Push to ECR
 
 ```bash
-# Build Lambda image (AWS Lambda runtime base)
-docker build -f Dockerfile.lambda -t video-processor-lambda .
-
-# Push to ECR for Lambda deployment
+# Push to ECR for Kubernetes deployment
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPOSITORY
-docker tag video-processor-lambda:latest $ECR_REPOSITORY:latest
+docker tag video-processor-job:latest $ECR_REPOSITORY:latest
 docker push $ECR_REPOSITORY:latest
 ```
-
-### AWS Lambda
-
-The service is designed to run as AWS Lambda function with:
-
-- **Runtime**: Custom container or Go 1.x runtime
-- **Memory**: 1024MB+ (for video processing)
-- **Timeout**: 5-15 minutes (depending on video size)
-- **Storage**: 512MB+ `/tmp` space for temporary files
 
 ## 🔧 Configuration
 
