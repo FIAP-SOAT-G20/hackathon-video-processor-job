@@ -146,7 +146,7 @@ docker run --rm \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0 \
   -e K8S_JOB_ENV_VIDEO_BUCKET=your-raw-video-bucket \
-  -e K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-images-bucket
+  -e K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-images-bucket \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
@@ -245,7 +245,7 @@ docker run --rm \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0 \
   -e K8S_JOB_ENV_VIDEO_BUCKET=video-processor-raw-videos \
-  -e K8S_JOB_ENV_PROCESSED_BUCKET=video-processor-processed-images
+  -e K8S_JOB_ENV_PROCESSED_BUCKET=video-processor-processed-images \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
