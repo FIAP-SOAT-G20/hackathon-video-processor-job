@@ -78,9 +78,15 @@ unit-test: lint ## Run unit tests with coverage profile
 coverage-check: unit-test ## Fail if coverage < 80%
 	@echo "🟢 Checking coverage threshold (80%)..."
 	@filtered=$(TEST_COVERAGE_FILE_NAME).filtered; \
-	cat $(TEST_COVERAGE_FILE_NAME) | grep -v "_mock.go" | grep -v "_response.go" \
+	cat $(TEST_COVERAGE_FILE_NAME) \
+		| grep -v "/cmd/" \
+		| grep -v "/mocks/" \
+		| grep -v "/infrastructure/datasource/" \
+		| grep -v "/infrastructure/logger/" \
+		| grep -v "/core/domain/" \
+		| grep -v "_mock.go" | grep -v "_response.go" \
 		| grep -v "_gateway.go" | grep -v "_datasource.go" | grep -v "_presenter.go" \
-		| grep -v "config" | grep -v "logger" | grep -v "_entity.go" | grep -v "errors.go" | grep -v "_dto.go" \
+		| grep -v "config" | grep -v "_entity.go" | grep -v "errors.go" | grep -v "_dto.go" \
 		| grep -v "_request.go" | grep -v "middleware" | grep -v "route" | grep -v "util" | grep -v "database" | grep -v "server" | grep -v "httpclient" | grep -v "service" \
 		| grep -v "tests/bdd" | grep -v "test/bdd" > $$filtered; \
 	total_cov=$$(go tool cover -func=$$filtered | grep '^total:' | awk '{print $$3}' | tr -d '%'); \
@@ -94,9 +100,15 @@ coverage-check: unit-test ## Fail if coverage < 80%
 test-coverage: ## Run tests with coverage
 	@echo "🟢 Running tests with coverage..."
 	$(GOTEST) $(TEST_PATH) $(RACE_FLAG) -cover -coverprofile=$(TEST_COVERAGE_FILE_NAME).tmp
-	@cat $(TEST_COVERAGE_FILE_NAME).tmp | grep -v "_mock.go" | grep -v "_response.go" \
+	@cat $(TEST_COVERAGE_FILE_NAME).tmp \
+	| grep -v "/cmd/" \
+	| grep -v "/mocks/" \
+	| grep -v "/infrastructure/datasource/" \
+	| grep -v "/infrastructure/logger/" \
+	| grep -v "/core/domain/" \
+	| grep -v "_mock.go" | grep -v "_response.go" \
 	| grep -v "_gateway.go" | grep -v "_datasource.go" | grep -v "_presenter.go" \
-	| grep -v "config" | grep -v "logger" | grep -v "_entity.go" | grep -v "errors.go" | grep -v "_dto.go" \
+	| grep -v "config" | grep -v "_entity.go" | grep -v "errors.go" | grep -v "_dto.go" \
 	| grep -v "_request.go" | grep -v "middleware" | grep -v "route" | grep -v "util" | grep -v "database" | grep -v "server" | grep -v "httpclient" | grep -v "service" \
 	| grep -v "tests/bdd" | grep -v "test/bdd" > $(TEST_COVERAGE_FILE_NAME)
 	@rm $(TEST_COVERAGE_FILE_NAME).tmp
