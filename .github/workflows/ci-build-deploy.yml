@@ -2,7 +2,7 @@ name: ci/build-deploy
 
 on:
   workflow_run:
-    workflows: [ "ci/bdd-tests" ]
+    workflows: [ "ci/unit-tests" ]
     types: [ completed ]
     branches: [ main ]
 
