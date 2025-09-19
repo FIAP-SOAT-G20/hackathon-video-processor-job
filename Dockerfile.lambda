@@ -15,24 +15,25 @@ COPY . .
 # Ensure go.sum is up to date
 RUN go mod tidy
 
-# Build the Go binary for video-processor-job execution
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o main ./cmd/video-processor-job
+# Build the Go binary for AWS Lambda
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags lambda.norpc -ldflags="-w -s" -o main ./cmd/lambda
 
-FROM alpine:latest
+# Final image based on AWS Lambda custom runtime base
+FROM public.ecr.aws/lambda/provided:al2023
 
 # Install static FFmpeg binary for video processing
-RUN apk update && \
-    apk add --no-cache wget xz tar && \
+RUN dnf update -y && \
+    dnf install -y wget xz tar && \
     wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
     tar xf ffmpeg-release-amd64-static.tar.xz && \
     mv ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ && \
     mv ffmpeg-*-amd64-static/ffprobe /usr/local/bin/ && \
     rm -rf ffmpeg-* && \
     chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe && \
-    apk del wget xz tar
+    dnf clean all
 
 # Copy the compiled binary from the build stage
 COPY --from=build /app/main ./main
 
-# Set the standalone entry point
+# Set the Lambda entry point
 ENTRYPOINT ["./main"]

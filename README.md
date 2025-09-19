@@ -11,7 +11,9 @@
 
 ## 💬 About
 
-AWS Lambda function developed for the FIAP Hackathon that processes video files and extracts frames using FFmpeg. The service follows Clean Architecture principles and handles video processing in a serverless environment.
+Video processing service developed for the FIAP Hackathon that extracts frames from video files using FFmpeg. The
+service follows Clean Architecture principles and can run both as an AWS Lambda function or as a standalone application
+for local development and testing.
 
 ### Key Features
 
@@ -19,7 +21,8 @@ AWS Lambda function developed for the FIAP Hackathon that processes video files 
 - **Frame Extraction**: Uses FFmpeg to extract frames as PNG or JPG images (configurable)
 - **ZIP Compression**: Packages extracted frames into a downloadable ZIP file (uploaded to S3)
 - **S3 Integration**: Downloads videos from S3, uploads processed frames, and cleans up original files
-- **Serverless**: Runs as AWS Lambda function with optimized performance
+- **Dual Execution**: Runs as AWS Lambda function OR standalone application
+- **Docker Support**: Containerized deployment with FFmpeg included
 - **Clean Architecture**: Well-structured codebase following Clean Architecture principles
 
 ## 🏗️ Architecture
@@ -27,7 +30,9 @@ AWS Lambda function developed for the FIAP Hackathon that processes video files 
 This service implements Clean Architecture with the following layers:
 
 ```
-├── main.go                     # Entry point and dependency injection
+├── cmd/                        # Application entry points
+│   ├── lambda/main.go          # AWS Lambda entry point
+│   └── video-processor-job/main.go # Video processor job entry point
 ├── internal/
 │   ├── core/                   # Business logic layer
 │   │   ├── domain/entity/      # Business entities
@@ -67,9 +72,15 @@ This service implements Clean Architecture with the following layers:
 
 ### Environment Variables
 
+The application uses environment variables for configuration. See `.env.example` for a complete list.
+
+**Core Variables:**
 ```bash
+KEY=videos/sample.mp4                        # S3 key of video to process
 VIDEO_BUCKET=your-raw-video-bucket          # S3 bucket for input videos
 PROCESSED_BUCKET=your-processed-images-bucket # S3 bucket for output ZIP files
+OUTPUT_FORMAT=jpg                            # Output format (jpg or png)
+FRAME_RATE=1.0                              # Frame extraction rate
 ```
 
 ### Local Development
@@ -81,26 +92,102 @@ make deps
 # Run tests
 make test
 
-# Build binary
-make build
+# Build video processor job binary
+go build -o video-processor-job ./cmd/video-processor-job
 
-# Run locally (requires video file)
-make run
+# Build Lambda binary  
+go build -o lambda ./cmd/lambda
+
+# Run video processor job locally with environment variables
+export KEY=videos/sample.mp4
+export OUTPUT_FORMAT=jpg
+export FRAME_RATE=1.0
+./video-processor-job
+```
+
+### Docker Builds
+
+```bash
+# Build video processor job Docker image
+docker build -t video-processor-job .
+
+# Build Lambda Docker image
+docker build -f Dockerfile.lambda -t video-processor-lambda .
 ```
 
 ### Lambda Deployment
 
 ```bash
-# Build Lambda deployment package
-make build-lambda
+# Push Lambda image to ECR
+docker tag video-processor-lambda:latest $ECR_REPOSITORY:latest
+docker push $ECR_REPOSITORY:latest
 
-# Deploy to AWS (requires terraform or SAM)
-make deploy
+# Update Lambda function
+aws lambda update-function-code --function-name video-processor \
+  --image-uri $ECR_REPOSITORY:latest
 ```
 
 ## Usage
 
-### Lambda direct invocation payload
+### Video Processor Job
+
+Run the video processor as a standalone job application for local development and testing:
+
+#### Command Line Usage
+
+```bash
+# Build video processor job binary
+go build -o video-processor-job ./cmd/video-processor-job
+
+# Set environment variables and run
+export KEY=videos/sample.mp4
+export OUTPUT_FORMAT=jpg
+export FRAME_RATE=1.0
+export VIDEO_BUCKET=your-raw-video-bucket
+export PROCESSED_BUCKET=your-processed-images-bucket
+./video-processor-job
+```
+
+#### Docker Usage
+
+```bash
+# Build video processor job Docker image
+docker build -t video-processor-job .
+
+# Run with Docker (requires AWS credentials)
+docker run --rm \
+  -e KEY=videos/sample.mp4 \
+  -e OUTPUT_FORMAT=jpg \
+  -e FRAME_RATE=2.0 \
+  -e VIDEO_BUCKET=your-raw-video-bucket \
+  -e PROCESSED_BUCKET=your-processed-images-bucket \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+  -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  video-processor-job
+```
+
+#### Video Processor Job Environment Variables
+
+**Required:**
+
+- `KEY`: S3 key (path) of the video file to process
+- `VIDEO_BUCKET`: S3 bucket name for input videos
+- `PROCESSED_BUCKET`: S3 bucket name for output files
+
+**Optional:**
+
+- `OUTPUT_FORMAT`: Output format (`jpg` or `png`, default: `jpg`)
+- `FRAME_RATE`: Frame extraction rate (default: `1.0`)
+
+**AWS Credentials:**
+
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_DEFAULT_REGION`
+
+### AWS Lambda
+
+#### Lambda direct invocation payload
 
 Example:
 
@@ -133,15 +220,83 @@ Notes:
 
 ### Response Format
 
-Note: output_key is the S3 object key for the generated ZIP in the processed bucket. Construct a public URL as needed (e.g., via a CDN or S3 access policy).
+Both standalone and Lambda versions return the same JSON response format:
 
 ```json
 {
   "success": true,
-  "message": "Video processed successfully. 120 frames extracted.",
-  "output_key": "processed/path/to/video_frames.zip",
-  "frame_count": 120
+  "message": "Video processed successfully. 3 frames extracted.",
+  "output_key": "processed/0c1d1aa6f0fdd8cd33db975a87b77545a711a9a867ccb1270b9e583174f3c1b1.zip",
+  "frame_count": 3,
+  "hash": "0c1d1aa6f0fdd8cd33db975a87b77545a711a9a867ccb1270b9e583174f3c1b1"
 }
+```
+
+**Note**: The `output_key` is the S3 object key for the generated ZIP in the processed bucket. The filename is based on
+the SHA-256 hash of the original video content. Construct a public URL as needed (e.g., via a CDN or S3 access policy).
+
+## 📝 Example Usage
+
+### Video Processor Job with Environment Variables
+
+**Option 1: Using .env file**
+
+```bash
+# Copy and configure environment file
+cp .env.example .env
+# Edit .env with your values
+
+# Load environment and run
+source .env
+go build -o video-processor-job ./cmd/video-processor-job
+./video-processor-job
+```
+
+**Option 2: Manual export**
+
+```bash
+# Set all required environment variables
+export KEY=videos/my-video.mp4
+export OUTPUT_FORMAT=jpg
+export FRAME_RATE=2.0
+export VIDEO_BUCKET=my-raw-videos
+export PROCESSED_BUCKET=my-processed-images
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_DEFAULT_REGION=us-east-1
+
+# Build and run
+go build -o video-processor-job ./cmd/video-processor-job
+./video-processor-job
+```
+
+### Docker with Environment Variables
+
+**Option 1: Using .env file**
+
+```bash
+# Copy and configure environment file
+cp .env.example .env
+# Edit .env with your values
+
+# Run with env file
+docker run --rm --env-file .env video-processor-job
+```
+
+**Option 2: Manual environment variables**
+
+```bash
+docker run --rm \
+  -e KEY=videos/sample.mp4 \
+  -e OUTPUT_FORMAT=jpg \
+  -e FRAME_RATE=1.0 \
+  -e VIDEO_BUCKET=video-processor-raw-videos \
+  -e PROCESSED_BUCKET=video-processor-processed-images \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+  -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  video-processor-job
 ```
 
 ## 🛠️ Development
@@ -206,14 +361,36 @@ Required repository secrets:
 
 Images are tagged as `latest` and `${{ github.sha }}`.
 
-### Docker Container
+### Docker Containers
+
+The project provides two Docker configurations:
+
+#### Video Processor Job Container
+```bash
+# Build video processor job image (Alpine Linux base)
+docker build -t video-processor-job .
+
+# Run video processor job container
+docker run --rm \
+  -v ~/.aws:/root/.aws \
+  -e KEY=videos/test.mp4 \
+  -e OUTPUT_FORMAT=jpg \
+  -e FRAME_RATE=1.0 \
+  -e VIDEO_BUCKET=your-bucket \
+  -e PROCESSED_BUCKET=your-processed-bucket \
+  video-processor-job
+```
+
+#### Lambda Container
 
 ```bash
-# Build container image
-make docker-build
+# Build Lambda image (AWS Lambda runtime base)
+docker build -f Dockerfile.lambda -t video-processor-lambda .
 
-# Push to ECR
-make docker-push
+# Push to ECR for Lambda deployment
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPOSITORY
+docker tag video-processor-lambda:latest $ECR_REPOSITORY:latest
+docker push $ECR_REPOSITORY:latest
 ```
 
 ### AWS Lambda
@@ -245,30 +422,3 @@ processed-images/
 ├── processed/video2_frames.zip
 └── ...
 ```
-
-## 📈 Performance
-
-- **Cold Start**: ~2-3 seconds
-- **Processing**: ~30-60 seconds per minute of video
-- **Memory Usage**: Scales with video resolution and length
-- **Concurrent Executions**: Configurable based on workload
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Team
-
-FIAP SOAT G20 - Hackathon Team
-
----
-
-<p align="center">Made with ❤️ for FIAP Hackathon</p>
