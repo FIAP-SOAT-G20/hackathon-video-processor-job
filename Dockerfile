@@ -1,38 +1,38 @@
 # Build stage
-FROM golang:1.25 AS build
+FROM golang:1.25-alpine AS build
 
 WORKDIR /app
 
-# Copy only go.mod and go.sum to leverage Docker layer caching
 COPY go.mod go.sum ./
-
-# Download Go module dependencies
 RUN go mod download
 
-# Copy the rest of the application code
 COPY . .
 
-# Ensure go.sum is up to date
 RUN go mod tidy
 
-# Build the Go binary for video-processor-job execution
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o main ./cmd/video-processor-job
 
-FROM alpine:latest
+# Final stage
+FROM alpine:3.18
 
-# Install static FFmpeg binary for video processing
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
+
+# Install FFmpeg
 RUN apk update && \
-    apk add --no-cache wget xz tar && \
+    apk add --no-cache --virtual .build-deps wget xz tar && \
     wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
     tar xf ffmpeg-release-amd64-static.tar.xz && \
     mv ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/ && \
     mv ffmpeg-*-amd64-static/ffprobe /usr/local/bin/ && \
-    rm -rf ffmpeg-* && \
-    chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe && \
-    apk del wget xz tar
+    rm -rf ffmpeg-* *.tar.xz && \
+    apk del .build-deps && \
+    rm -rf /var/cache/apk/*
 
-# Copy the compiled binary from the build stage
-COPY --from=build /app/main ./main
+WORKDIR /app
+RUN chown -R appuser:appuser /app
+USER appuser
 
-# Set the standalone entry point
+COPY --from=build --chown=appuser:appuser /app/main ./main
+
 ENTRYPOINT ["./main"]
