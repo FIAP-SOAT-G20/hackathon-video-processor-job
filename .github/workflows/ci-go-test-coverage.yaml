@@ -99,5 +99,5 @@ jobs:
       - name: finally check coverage
         if: steps.coverage.outcome == 'failure'
         shell: bash
-        run: echo "coverage check failed"
+        run: exit 1
 
