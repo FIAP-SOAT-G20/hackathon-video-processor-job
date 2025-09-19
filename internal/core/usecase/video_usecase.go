@@ -239,7 +239,7 @@ func (uc *videoUseCase) extractFrames(ctx context.Context, videoPath string, cfg
 	log := uc.logger.WithContext(ctx)
 	log.Info("Starting frame extraction")
 
-	_, frameCount, zipPath, err := uc.videoProcessor.ProcessVideo(ctx, videoPath, cfg.FrameRate, cfg.OutputFormat)
+	frameCount, zipPath, err := uc.videoProcessor.ProcessVideo(ctx, videoPath, cfg.FrameRate, cfg.OutputFormat)
 	if err != nil {
 		log.Error("Failed to process video", "error", err)
 		return 0, "", fmt.Errorf("failed to process video: %w", err)
