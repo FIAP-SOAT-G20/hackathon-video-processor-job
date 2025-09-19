@@ -30,41 +30,37 @@ func NewFFmpegService(fileManager port.FileManager) port.VideoProcessor {
 }
 
 // ProcessVideo processes video and extracts frames using FFmpeg
-func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, frameRate float64, outputFormat string) ([]string, int, string, error) {
-	// Validate inputs
-	if frameRate <= 0 {
-		return nil, 0, "", fmt.Errorf("invalid frame rate: %v", frameRate)
-	}
+func (s *FFmpegService) ProcessVideo(ctx context.Context, videoPath string, frameRate float64, outputFormat string) (int, string, error) {
 	// Create temporary directory for frames
 	tempDir, err := s.fileManager.CreateTempDir(ctx, "frames_")
 	if err != nil {
-		return nil, 0, "", fmt.Errorf("failed to create temp directory: %w", err)
+		return 0, "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer func() {
 		_ = s.fileManager.DeleteDir(ctx, tempDir)
 	}()
 
 	// Extract frames
-	framePaths, err := s.extractFrames(ctx, videoPath, frameRate, strings.ToLower(strings.TrimSpace(outputFormat)), tempDir)
+	framePaths, err := s.extractFrames(ctx, videoPath, frameRate, outputFormat, tempDir)
 	if err != nil {
-		return nil, 0, "", fmt.Errorf("failed to extract frames: %w", err)
+		return 0, "", fmt.Errorf("failed to extract frames: %w", err)
 	}
 
 	if len(framePaths) == 0 {
-		return nil, 0, "", fmt.Errorf("no frames extracted from video")
+		return 0, "", fmt.Errorf("no frames extracted from video")
 	}
 
 	// Create ZIP file
 	zipPath, err := s.fileManager.CreateTempFile(ctx, "frames_", ".zip")
 	if err != nil {
-		return nil, 0, "", fmt.Errorf("failed to create temp zip file: %w", err)
+		return 0, "", fmt.Errorf("failed to create temp zip file: %w", err)
 	}
 
 	if err := s.createZipFromFiles(framePaths, zipPath); err != nil {
-		return nil, 0, "", fmt.Errorf("failed to create zip file: %w", err)
+		return 0, "", fmt.Errorf("failed to create zip file: %w", err)
 	}
 
-	return framePaths, len(framePaths), zipPath, nil
+	return len(framePaths), zipPath, nil
 }
 
 // ValidateVideo checks if video file is valid and can be processed
@@ -84,9 +80,9 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 		videoPath,
 	)
 
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("video validation failed: %w", err)
+		return fmt.Errorf("video validation failed: %w\nffprobe output:\n%s", err, string(output))
 	}
 
 	// Check if we got packet count (indicates valid video stream)
