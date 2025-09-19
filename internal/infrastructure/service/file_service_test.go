@@ -14,12 +14,7 @@ func TestLocalFileService(t *testing.T) {
 	r := require.New(t)
 	s := NewLocalFileService().(*LocalFileService)
 
-	// Temp dir and file
-	dir, err := s.CreateTempDir(context.Background(), "test_")
-	r.NoError(err)
-	r.DirExists(dir)
-	defer func() { _ = s.DeleteDir(context.Background(), dir) }()
-
+	// Temp file
 	f, err := s.CreateTempFile(context.Background(), "file_", ".txt")
 	r.NoError(err)
 
