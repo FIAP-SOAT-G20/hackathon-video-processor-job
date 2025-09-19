@@ -60,4 +60,48 @@ func TestVideoController(t *testing.T) {
 		r.Error(err)
 		r.Equal(prBytes, res)
 	})
+
+	// presenter success path returns marshal error
+	t.Run("ProcessVideo/presenter_success_marshal_error", func(t *testing.T) {
+		r := require.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		uc := pmocks.NewMockVideoUseCase(ctrl)
+		pr := pmocks.NewMockPresenter(ctrl)
+		log := logger.NewSlogLogger()
+		c := NewVideoController(uc, pr, log)
+
+		input := dto.ProcessVideoInput{VideoKey: "foo.mp4"}
+		out := &dto.ProcessVideoOutput{Success: true, Message: "ok"}
+
+		uc.EXPECT().ProcessVideo(gomock.Any(), input).Return(out, nil)
+		pr.EXPECT().PresentProcessVideoOutput(out).Return(nil, errors.New("marshal error"))
+
+		res, err := c.ProcessVideo(context.Background(), input)
+		r.Error(err)
+		r.Nil(res)
+	})
+
+	// presenter error path returns marshal error
+	t.Run("ProcessVideo/presenter_error_marshal_error", func(t *testing.T) {
+		r := require.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		uc := pmocks.NewMockVideoUseCase(ctrl)
+		pr := pmocks.NewMockPresenter(ctrl)
+		log := logger.NewSlogLogger()
+		c := NewVideoController(uc, pr, log)
+
+		input := dto.ProcessVideoInput{VideoKey: "bar.mp4"}
+		errBoom := errors.New("boom")
+
+		uc.EXPECT().ProcessVideo(gomock.Any(), input).Return(nil, errBoom)
+		pr.EXPECT().PresentError(errBoom).Return(nil, errors.New("marshal error"))
+
+		res, err := c.ProcessVideo(context.Background(), input)
+		r.Error(err)
+		r.Nil(res)
+	})
 }
