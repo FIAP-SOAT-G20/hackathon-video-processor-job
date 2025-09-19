@@ -12,7 +12,7 @@ type VideoGateway interface {
 }
 
 type VideoProcessor interface {
-	ProcessVideo(ctx context.Context, videoPath string, frameRate float64, outputFormat string) ([]string, int, string, error)
+	ProcessVideo(ctx context.Context, videoPath string, frameRate float64, outputFormat string) (int, string, error)
 	ValidateVideo(ctx context.Context, videoPath string) error
 }
 
