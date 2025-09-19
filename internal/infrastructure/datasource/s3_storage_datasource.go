@@ -31,7 +31,7 @@ func NewS3StorageDataSource(client *s3.Client, videoBucket, processedBucket stri
 // Download downloads data from S3
 func (ds *S3StorageDataSource) Download(ctx context.Context, key string) (io.ReadCloser, error) {
 	bucket := ds.videoBucket
-	if strings.Contains(key, "processed/") {
+	if strings.HasPrefix(key, "processed/") {
 		bucket = ds.processedBucket
 	}
 
@@ -50,7 +50,7 @@ func (ds *S3StorageDataSource) Download(ctx context.Context, key string) (io.Rea
 // Upload uploads data to S3. Returns the object key that was uploaded.
 func (ds *S3StorageDataSource) Upload(ctx context.Context, key string, data io.Reader, contentType string, size int64) (string, error) {
 	bucket := ds.processedBucket
-	if strings.Contains(key, "raw/") || strings.Contains(key, "video/") {
+	if strings.HasPrefix(key, "raw/") || strings.HasPrefix(key, "video/") {
 		bucket = ds.videoBucket
 	}
 
@@ -73,7 +73,7 @@ func (ds *S3StorageDataSource) Upload(ctx context.Context, key string, data io.R
 // Delete deletes an object from S3
 func (ds *S3StorageDataSource) Delete(ctx context.Context, key string) error {
 	bucket := ds.videoBucket
-	if strings.Contains(key, "processed/") {
+	if strings.HasPrefix(key, "processed/") {
 		bucket = ds.processedBucket
 	}
 
