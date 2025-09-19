@@ -44,7 +44,7 @@ func TestVideoUseCase(t *testing.T) {
 
 			// Validate and process (defaults: 1.0, png)
 			vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(nil)
-			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "png").Return([]string{"f1.png"}, 1, zipPath, nil)
+			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "png").Return(1, zipPath, nil)
 
 			// Upload result using hash - mock returns any key that is passed
 			fm.EXPECT().ReadFile(gomock.Any(), zipPath).Return(io.NopCloser(bytes.NewBufferString("zipdata")), nil)
@@ -141,7 +141,7 @@ func TestVideoUseCase(t *testing.T) {
 			vg.EXPECT().Download(gomock.Any(), videoKey).Return(io.NopCloser(strings.NewReader("data")), nil)
 			fm.EXPECT().WriteToFile(gomock.Any(), localPath, gomock.Any()).Return(nil)
 			vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(nil)
-			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "png").Return([]string{}, 0, zipPath, nil)
+			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "png").Return(0, zipPath, nil)
 
 			// defers should cleanup these files when error occurs
 			fm.EXPECT().DeleteFile(gomock.Any(), localPath).Return(nil)
@@ -199,7 +199,7 @@ func TestVideoUseCase(t *testing.T) {
 		fm.EXPECT().WriteToFile(gomock.Any(), localPath, gomock.Any()).Return(nil)
 		vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(nil)
 		// input has frame_rate=0 (sanitize to 1.0) and output_format="JPG" (lowercase to "jpg")
-		vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "jpg").Return([]string{"f1.jpg"}, 1, zipPath, nil)
+		vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "jpg").Return(1, zipPath, nil)
 		fm.EXPECT().ReadFile(gomock.Any(), zipPath).Return(io.NopCloser(bytes.NewBufferString("zip")), nil)
 		fm.EXPECT().GetFileSize(gomock.Any(), zipPath).Return(int64(3), nil)
 		vg.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any(), "application/zip", int64(3)).DoAndReturn(
