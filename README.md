@@ -104,15 +104,15 @@ docker run --rm --env-file .env video-processor-job
 Minimal example (without env-file; replace values):
 ```bash
 docker run --rm \
-  -e K8S_JOB_ENV_AWS_ACCESS_KEY_ID=... \
-  -e K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=... \
-  -e K8S_JOB_ENV_AWS_SESSION_TOKEN=... \
-  -e K8S_JOB_ENV_AWS_REGION=us-east-1 \
-  -e K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4 \
-  -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
-  -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0 \
-  -e K8S_JOB_ENV_VIDEO_BUCKET=video-processor-raw-videos \
-  -e K8S_JOB_ENV_PROCESSED_BUCKET=video-processor-processed-images \
+  -e AWS_ACCESS_KEY_ID=... \
+  -e AWS_SECRET_ACCESS_KEY=... \
+  -e AWS_SESSION_TOKEN=... \
+  -e AWS_REGION=us-east-1 \
+  -e VIDEO_KEY=videos/sample.mp4 \
+  -e VIDEO_EXPORT_FORMAT=jpg \
+  -e VIDEO_EXPORT_FPS=1.0 \
+  -e VIDEO_BUCKET=video-processor-raw-videos \
+  -e PROCESSED_BUCKET=video-processor-processed-images \
   video-processor-job
 ```
 
