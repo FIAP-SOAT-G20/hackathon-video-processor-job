@@ -147,10 +147,6 @@ docker run --rm \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0 \
   -e K8S_JOB_ENV_VIDEO_BUCKET=your-raw-video-bucket \
   -e K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-images-bucket \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-  -e AWS_DEFAULT_REGION=us-east-1 \
   video-processor-job
 ```
 
@@ -167,10 +163,6 @@ docker run --rm \
 - `K8S_JOB_ENV_VIDEO_EXPORT_FORMAT`: Output format (`jpg` or `png`, default: `jpg`)
 - `K8S_JOB_ENV_VIDEO_EXPORT_FPS`: Frame extraction rate (default: `1.0`)
 
-**AWS Credentials:**
-
-- `K8S_JOB_ENV_AWS_ACCESS_KEY_ID`, `K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY`, `K8S_JOB_ENV_AWS_SESSION_TOKEN`,
-  `K8S_JOB_ENV_AWS_DEFAULT_REGION`
 
 ### Response Format
 
@@ -215,9 +207,6 @@ export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg
 export K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0
 export K8S_JOB_ENV_VIDEO_BUCKET=my-raw-videos
 export K8S_JOB_ENV_PROCESSED_BUCKET=my-processed-images
-export AWS_ACCESS_KEY_ID=your-access-key
-export AWS_SECRET_ACCESS_KEY=your-secret-key
-export AWS_DEFAULT_REGION=us-east-1
 
 # Build and run
 go build -o video-processor-job ./cmd/video-processor-job
@@ -246,10 +235,6 @@ docker run --rm \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0 \
   -e K8S_JOB_ENV_VIDEO_BUCKET=video-processor-raw-videos \
   -e K8S_JOB_ENV_PROCESSED_BUCKET=video-processor-processed-images \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-  -e AWS_DEFAULT_REGION=us-east-1 \
   video-processor-job
 ```
 
