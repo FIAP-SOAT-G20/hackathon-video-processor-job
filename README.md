@@ -75,6 +75,12 @@ The application uses environment variables for configuration. See `.env.example`
 **Core Variables:**
 
 ```bash
+# AWS Credentials
+K8S_JOB_ENV_AWS_ACCESS_KEY_ID=your-access-key-id         # AWS Access Key
+K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=your-secret-access-key # AWS Secret Key
+K8S_JOB_ENV_AWS_REGION=us-east-1                         # AWS Region
+
+# Video Processing
 K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4                  # S3 key of video to process
 K8S_JOB_ENV_VIDEO_BUCKET=your-raw-video-bucket          # S3 bucket for input videos
 K8S_JOB_ENV_PROCESSED_BUCKET=your-processed-images-bucket # S3 bucket for output ZIP files
@@ -95,6 +101,9 @@ make test
 go build -o video-processor-job ./cmd/video-processor-job
 
 # Run video processor job locally with environment variables
+export K8S_JOB_ENV_AWS_ACCESS_KEY_ID=your-access-key
+export K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=your-secret-key
+export K8S_JOB_ENV_AWS_REGION=us-east-1
 export K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4
 export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg
 export K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0
@@ -126,6 +135,9 @@ Run the video processor job for local development, testing, or Kubernetes deploy
 go build -o video-processor-job ./cmd/video-processor-job
 
 # Set environment variables and run
+export K8S_JOB_ENV_AWS_ACCESS_KEY_ID=your-access-key
+export K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=your-secret-key
+export K8S_JOB_ENV_AWS_REGION=us-east-1
 export K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4
 export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg
 export K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0
@@ -142,6 +154,9 @@ docker build -t video-processor-job .
 
 # Run with Docker (requires AWS credentials)
 docker run --rm \
+  -e K8S_JOB_ENV_AWS_ACCESS_KEY_ID=your-access-key \
+  -e K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=your-secret-key \
+  -e K8S_JOB_ENV_AWS_REGION=us-east-1 \
   -e K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4 \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0 \
@@ -154,12 +169,15 @@ docker run --rm \
 
 **Required:**
 
+- `K8S_JOB_ENV_AWS_ACCESS_KEY_ID`: AWS Access Key ID
+- `K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key
 - `K8S_JOB_ENV_VIDEO_KEY`: S3 key (path) of the video file to process
-- `K8S_JOB_ENV_VIDEO_BUCKET`: S3 bucket name for input videos
-- `K8S_JOB_ENV_PROCESSED_BUCKET`: S3 bucket name for output files
+- `K8S_JOB_ENV_VIDEO_BUCKET`: S3 bucket name for input videos (default: video-processor-raw-videos)
+- `K8S_JOB_ENV_PROCESSED_BUCKET`: S3 bucket name for output files (default: video-processor-processed-images)
 
 **Optional:**
 
+- `K8S_JOB_ENV_AWS_REGION`: AWS Region (default: `us-east-1`)
 - `K8S_JOB_ENV_VIDEO_EXPORT_FORMAT`: Output format (`jpg` or `png`, default: `jpg`)
 - `K8S_JOB_ENV_VIDEO_EXPORT_FPS`: Frame extraction rate (default: `1.0`)
 
@@ -202,6 +220,9 @@ go build -o video-processor-job ./cmd/video-processor-job
 
 ```bash
 # Set all required environment variables
+export K8S_JOB_ENV_AWS_ACCESS_KEY_ID=your-access-key
+export K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=your-secret-key
+export K8S_JOB_ENV_AWS_REGION=us-east-1
 export K8S_JOB_ENV_VIDEO_KEY=videos/my-video.mp4
 export K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg
 export K8S_JOB_ENV_VIDEO_EXPORT_FPS=2.0
@@ -230,6 +251,9 @@ docker run --rm --env-file .env video-processor-job
 
 ```bash
 docker run --rm \
+  -e K8S_JOB_ENV_AWS_ACCESS_KEY_ID=your-access-key \
+  -e K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=your-secret-key \
+  -e K8S_JOB_ENV_AWS_REGION=us-east-1 \
   -e K8S_JOB_ENV_VIDEO_KEY=videos/sample.mp4 \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0 \
@@ -310,7 +334,9 @@ docker build -t video-processor-job .
 
 # Run video processor job container
 docker run --rm \
-  -v ~/.aws:/root/.aws \
+  -e K8S_JOB_ENV_AWS_ACCESS_KEY_ID=your-access-key \
+  -e K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY=your-secret-key \
+  -e K8S_JOB_ENV_AWS_REGION=us-east-1 \
   -e K8S_JOB_ENV_VIDEO_KEY=videos/test.mp4 \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FORMAT=jpg \
   -e K8S_JOB_ENV_VIDEO_EXPORT_FPS=1.0 \
