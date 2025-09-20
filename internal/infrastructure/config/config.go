@@ -37,22 +37,22 @@ func LoadConfig() *Config {
 	config := &Config{}
 
 	// AWS Configuration
-	config.AWS.Region = getEnv("K8S_JOB_ENV_AWS_REGION", "us-east-1")
-	config.AWS.AccessKey = getEnv("K8S_JOB_ENV_AWS_ACCESS_KEY_ID", "")
-	config.AWS.SecretAccessKey = getEnv("K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY", "")
-	config.AWS.SessionToken = getEnv("K8S_JOB_ENV_AWS_SESSION_TOKEN", "")
+	config.AWS.Region = getEnv("AWS_REGION", "us-east-1")
+	config.AWS.AccessKey = getEnv("AWS_ACCESS_KEY_ID", "")
+	config.AWS.SecretAccessKey = getEnv("AWS_SECRET_ACCESS_KEY", "")
+	config.AWS.SessionToken = getEnv("AWS_SESSION_TOKEN", "")
 
 	// Video Configuration
-	config.Video.Key = getEnv("K8S_JOB_ENV_VIDEO_KEY", "")
-	config.Video.Bucket = getEnv("K8S_JOB_ENV_VIDEO_BUCKET", "video-processor-raw-videos")
-	config.Video.ProcessedBucket = getEnv("K8S_JOB_ENV_PROCESSED_BUCKET", "video-processor-processed-images")
-	config.Video.ExportFormat = getEnv("K8S_JOB_ENV_VIDEO_EXPORT_FORMAT", "jpg")
+	config.Video.Key = getEnv("VIDEO_KEY", "")
+	config.Video.Bucket = getEnv("VIDEO_BUCKET", "video-processor-raw-videos")
+	config.Video.ProcessedBucket = getEnv("PROCESSED_BUCKET", "video-processor-processed-images")
+	config.Video.ExportFormat = getEnv("VIDEO_EXPORT_FORMAT", "jpg")
 
 	// Parse frame rate
-	frameRateStr := getEnv("K8S_JOB_ENV_VIDEO_EXPORT_FPS", "1.0")
+	frameRateStr := getEnv("VIDEO_EXPORT_FPS", "1.0")
 	frameRate, err := strconv.ParseFloat(frameRateStr, 64)
 	if err != nil {
-		log.Printf("Warning: Invalid K8S_JOB_ENV_VIDEO_EXPORT_FPS '%s', using default 1.0: %v", frameRateStr, err)
+		log.Printf("Warning: Invalid VIDEO_EXPORT_FPS '%s', using default 1.0: %v", frameRateStr, err)
 		frameRate = 1.0
 	}
 	config.Video.ExportFPS = frameRate
@@ -65,16 +65,16 @@ func (c *Config) ValidateRequiredFields() error {
 	var missingFields []string
 
 	if c.AWS.AccessKey == "" {
-		missingFields = append(missingFields, "K8S_JOB_ENV_AWS_ACCESS_KEY_ID")
+		missingFields = append(missingFields, "AWS_ACCESS_KEY_ID")
 	}
 	if c.AWS.SecretAccessKey == "" {
-		missingFields = append(missingFields, "K8S_JOB_ENV_AWS_SECRET_ACCESS_KEY")
+		missingFields = append(missingFields, "AWS_SECRET_ACCESS_KEY")
 	}
 	if c.AWS.SessionToken == "" {
-		missingFields = append(missingFields, "K8S_JOB_ENV_AWS_SESSION_TOKEN")
+		missingFields = append(missingFields, "AWS_SESSION_TOKEN")
 	}
 	if c.Video.Key == "" {
-		missingFields = append(missingFields, "K8S_JOB_ENV_VIDEO_KEY")
+		missingFields = append(missingFields, "VIDEO_KEY")
 	}
 
 	if len(missingFields) > 0 {

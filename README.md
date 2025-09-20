@@ -76,9 +76,9 @@ Required:
 
 Optional (defaults):
 
-- K8S_JOB_ENV_AWS_REGION (default: `us-east-1`)
-- K8S_JOB_ENV_VIDEO_EXPORT_FORMAT (`jpg` or `png`, default: `jpg`)
-- K8S_JOB_ENV_VIDEO_EXPORT_FPS (default: `1.0`)
+- AWS_REGION (default: `us-east-1`)
+- VIDEO_EXPORT_FORMAT (`jpg` or `png`, default: `jpg`)
+- VIDEO_EXPORT_FPS (default: `1.0`)
 
 Tip: use a `.env` file to avoid exposing secrets in commands (see below).
 

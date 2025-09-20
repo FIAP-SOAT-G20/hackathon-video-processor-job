@@ -148,9 +148,9 @@ docker-push: ## Push Docker image
 docker-run: docker-build ## Run Docker container locally
 	@echo "🟢 Running Docker container locally..."
 	docker run --rm \
-		-e K8S_JOB_ENV_VIDEO_KEY=videos/test.mp4 \
-		-e K8S_JOB_ENV_VIDEO_BUCKET=test-video-bucket \
-		-e K8S_JOB_ENV_PROCESSED_BUCKET=test-processed-bucket \
+		-e VIDEO_KEY=videos/test.mp4 \
+		-e VIDEO_BUCKET=test-video-bucket \
+		-e PROCESSED_BUCKET=test-processed-bucket \
 		video-processor-job
 
 
