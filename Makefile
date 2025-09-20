@@ -23,7 +23,6 @@ GOTIDY=$(GOCMD) mod tidy
 
 # AWS variables
 AWS_REGION=us-east-1
-FUNCTION_NAME=video-processor-job
 
 # Looks at comments using ## on targets and uses them to produce a help output.
 .PHONY: help
