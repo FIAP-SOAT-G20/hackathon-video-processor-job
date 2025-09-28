@@ -217,7 +217,7 @@ func (uc *videoUseCase) writeFileAndGenerateHash(ctx context.Context, filePath s
 func (uc *videoUseCase) configureProcessing(inputConfig *dto.ProcessingConfigInput, log logger.Logger) entity.ProcessingConfig {
 	var cfg entity.ProcessingConfig
 	if inputConfig == nil {
-		cfg = entity.ProcessingConfig{FrameRate: 1.0, OutputFormat: "png"}
+		cfg = entity.ProcessingConfig{FrameRate: 1.0, OutputFormat: "jpg"}
 		log.Info("Using default configuration")
 	} else {
 		cfg = entity.ProcessingConfig{FrameRate: inputConfig.FrameRate, OutputFormat: inputConfig.OutputFormat}
