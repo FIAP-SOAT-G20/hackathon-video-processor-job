@@ -98,39 +98,26 @@ func (s *FFmpegService) ValidateVideo(ctx context.Context, videoPath string) err
 func (s *FFmpegService) extractFrames(ctx context.Context, videoPath string, frameRate float64, outputFormat string, outputDir string) ([]string, error) {
 	framePattern := filepath.Join(outputDir, fmt.Sprintf("frame_%%04d.%s", outputFormat))
 
-	var args []string
-	if outputFormat == "jpg" {
-		args = []string{
-			"-nostdin",
-			"-loglevel", "error",
-			"-y",
-			"-i", videoPath,
-			"-map", "0:v:0",
-			"-an",
-			"-vf", fmt.Sprintf("fps=%g", frameRate),
-			"-start_number", "0",
-			"-f", "image2",
-			"-vcodec", "mjpeg",
-			"-q:v", DefaultJPEGQuality,
-			"-frame_pts", "1",
-			framePattern,
-		}
-	} else { // png
-		args = []string{
-			"-nostdin",
-			"-loglevel", "error",
-			"-y",
-			"-i", videoPath,
-			"-map", "0:v:0",
-			"-an",
-			"-vf", fmt.Sprintf("fps=%g", frameRate),
-			"-start_number", "0",
-			"-f", "image2",
-			"-vcodec", "png",
-			"-frame_pts", "1",
-			framePattern,
-		}
+	args := []string{
+		"-nostdin",
+		"-loglevel", "error",
+		"-y",
+		"-i", videoPath,
+		"-map", "0:v:0",
+		"-an",
+		"-vf", fmt.Sprintf("fps=%g", frameRate),
+		"-start_number", "0",
+		"-f", "image2",
+		"-frame_pts", "1",
 	}
+
+	if outputFormat == "jpg" {
+		args = append(args, "-vcodec", "mjpeg", "-q:v", DefaultJPEGQuality)
+	} else { // png
+		args = append(args, "-vcodec", "png")
+	}
+
+	args = append(args, framePattern)
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	output, err := cmd.CombinedOutput()
