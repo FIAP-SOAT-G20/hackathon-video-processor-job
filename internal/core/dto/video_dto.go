@@ -9,6 +9,8 @@ type ProcessingConfigInput struct {
 // ProcessVideoInput represents the input for video processing
 type ProcessVideoInput struct {
 	VideoKey      string
+	UserId        string
+	VideoId       string
 	Configuration *ProcessingConfigInput
 }
 

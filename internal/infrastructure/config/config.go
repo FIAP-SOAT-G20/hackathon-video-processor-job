@@ -20,10 +20,13 @@ type Config struct {
 	// Video Processing Settings
 	Video struct {
 		Key             string
+		Id              string
+		UserId          string
 		Bucket          string
 		ProcessedBucket string
 		ExportFormat    string
 		ExportFPS       float64
+		SnsTopic        string
 	}
 }
 
@@ -44,10 +47,12 @@ func LoadConfig() *Config {
 
 	// Video Configuration
 	config.Video.Key = getEnv("VIDEO_KEY", "")
+	config.Video.Id = getEnv("VIDEO_ID", "1")
+	config.Video.UserId = getEnv("VIDEO_USER_ID", "1")
 	config.Video.Bucket = getEnv("VIDEO_BUCKET", "video-processor-raw-videos")
 	config.Video.ProcessedBucket = getEnv("PROCESSED_BUCKET", "video-processor-processed-images")
 	config.Video.ExportFormat = getEnv("VIDEO_EXPORT_FORMAT", "jpg")
-
+	config.Video.SnsTopic = getEnv("SNS_TOPIC_ARN", "arn:aws:sns:us-east-1:905417995957:video-status-updated")
 	// Parse frame rate
 	frameRateStr := getEnv("VIDEO_EXPORT_FPS", "1.0")
 	frameRate, err := strconv.ParseFloat(frameRateStr, 64)

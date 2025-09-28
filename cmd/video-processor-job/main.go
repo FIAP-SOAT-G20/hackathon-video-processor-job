@@ -10,6 +10,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
 
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/adapter/controller"
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/adapter/gateway"
@@ -69,10 +70,12 @@ func main() {
 	storageDataSource := datasource.NewS3StorageDataSource(s3Client, cfg.Video.Bucket, cfg.Video.ProcessedBucket)
 	fileManager := service.NewLocalFileService()
 	videoProcessor := service.NewFFmpegService(fileManager)
+	snsClient := sns.NewFromConfig(awsCfg)
+	snsDataSource := datasource.NewSnsMessageBroker(snsClient, cfg.Video.SnsTopic)
 
 	// Initialize adapter layer
 	logger.Info("Initializing adapter layer")
-	videoGateway := gateway.NewVideoGateway(storageDataSource)
+	videoGateway := gateway.NewVideoGateway(storageDataSource, snsDataSource)
 	videoPresenter := presenter.NewVideoJsonPresenter()
 
 	// Initialize core layer
@@ -88,6 +91,8 @@ func main() {
 
 	input := dto.ProcessVideoInput{
 		VideoKey: cfg.Video.Key,
+		VideoId:  cfg.Video.Id,
+		UserId:   cfg.Video.UserId,
 		Configuration: &dto.ProcessingConfigInput{
 			FrameRate:    cfg.Video.ExportFPS,
 			OutputFormat: cfg.Video.ExportFormat,

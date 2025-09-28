@@ -59,6 +59,9 @@ func TestVideoUseCase(t *testing.T) {
 			fm.EXPECT().DeleteFile(gomock.Any(), localPath).Return(nil)
 			fm.EXPECT().DeleteFile(gomock.Any(), zipPath).Return(nil)
 
+			// Update video status
+			vg.EXPECT().UpdateStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "PROCESSED").Return(nil)
+
 			out, err := uc.ProcessVideo(context.Background(), dto.ProcessVideoInput{VideoKey: videoKey})
 			require.NoError(t, err)
 			require.True(t, out.Success)
@@ -210,6 +213,9 @@ func TestVideoUseCase(t *testing.T) {
 		fm.EXPECT().DeleteFile(gomock.Any(), localPath).Return(nil)
 		fm.EXPECT().DeleteFile(gomock.Any(), zipPath).Return(nil)
 
+		// Update video status
+		vg.EXPECT().UpdateStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "PROCESSED").Return(nil)
+
 		in := dto.ProcessVideoInput{VideoKey: videoKey, Configuration: &dto.ProcessingConfigInput{FrameRate: 0, OutputFormat: "JPG"}}
 		out, err := uc.ProcessVideo(context.Background(), in)
 		require.NoError(t, err)
@@ -330,6 +336,9 @@ func TestVideoUseCase(t *testing.T) {
 		vg.EXPECT().Delete(gomock.Any(), "vid.mp4").Return(nil)
 		fm.EXPECT().DeleteFile(gomock.Any(), local).Return(nil)
 		fm.EXPECT().DeleteFile(gomock.Any(), zip).Return(nil)
+
+		// Update video status
+		vg.EXPECT().UpdateStatus(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), "PROCESSED").Return(nil)
 
 		in := dto.ProcessVideoInput{VideoKey: "vid.mp4", Configuration: &dto.ProcessingConfigInput{FrameRate: 1.0, OutputFormat: "jpeg"}}
 		out, err := uc.ProcessVideo(context.Background(), in)

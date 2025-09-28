@@ -70,6 +70,20 @@ func (mr *MockVideoGatewayMockRecorder) Download(ctx, key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Download", reflect.TypeOf((*MockVideoGateway)(nil).Download), ctx, key)
 }
 
+// UpdateStatus mocks base method.
+func (m *MockVideoGateway) UpdateStatus(ctx context.Context, videoId, userId, videoHash, status string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, videoId, userId, videoHash, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockVideoGatewayMockRecorder) UpdateStatus(ctx, videoId, userId, videoHash, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockVideoGateway)(nil).UpdateStatus), ctx, videoId, userId, videoHash, status)
+}
+
 // Upload mocks base method.
 func (m *MockVideoGateway) Upload(ctx context.Context, key string, data io.Reader, contentType string, size int64) (string, error) {
 	m.ctrl.T.Helper()

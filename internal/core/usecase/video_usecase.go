@@ -90,6 +90,9 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 	// Step 5: Cleanup - delete original video
 	uc.deleteOriginalVideo(ctx, input.VideoKey)
 
+	// Step 6: Update video status
+	uc.updateVideoStatus(ctx, input.VideoId, input.UserId, videoHash, "PROCESSED")
+
 	log.Info("Video processing completed successfully", "frame_count", frameCount, "output_key", outputKey, "hash", videoHash)
 	return &dto.ProcessVideoOutput{
 		Success:    true,
@@ -292,5 +295,15 @@ func (uc *videoUseCase) deleteOriginalVideo(ctx context.Context, videoKey string
 		log.Warn("Failed to delete original video", "error", err, "video_key", videoKey)
 	} else {
 		log.Info("Original video deleted successfully")
+	}
+}
+
+func (uc *videoUseCase) updateVideoStatus(ctx context.Context, videoId string, userId string, videoHash, status string) {
+	log := uc.logger.WithContext(ctx)
+	log.Info("Updating video status", "video_key", videoId, "status", status)
+	if err := uc.videoGateway.UpdateStatus(ctx, videoId, userId, videoHash, status); err != nil {
+		log.Warn("Failed to update video status", "error", err, "video_key", videoId, "status", status)
+	} else {
+		log.Info("Video status updated successfully", "video_key", videoId, "status", status)
 	}
 }

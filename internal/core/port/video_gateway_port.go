@@ -9,6 +9,7 @@ type VideoGateway interface {
 	Download(ctx context.Context, key string) (io.ReadCloser, error)
 	Upload(ctx context.Context, key string, data io.Reader, contentType string, size int64) (string, error)
 	Delete(ctx context.Context, key string) error
+	UpdateStatus(ctx context.Context, videoId string, userId string, videoHash string, status string) error
 }
 
 type VideoProcessor interface {
