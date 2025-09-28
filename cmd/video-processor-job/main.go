@@ -8,6 +8,7 @@ import (
 	"log"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/adapter/controller"
@@ -41,10 +42,15 @@ func main() {
 	logger := logger.NewSlogLogger().With("trace_id", traceID)
 	logger.Info("Starting Video Processor standalone application")
 
-	// Initialize AWS config
+	// Initialize AWS config with explicit credentials
 	logger.Info("Loading AWS configuration", "region", cfg.AWS.Region)
 	awsCfg, err := awsconfig.LoadDefaultConfig(ctx,
 		awsconfig.WithRegion(cfg.AWS.Region),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			cfg.AWS.AccessKey,
+			cfg.AWS.SecretAccessKey,
+			cfg.AWS.SessionToken,
+		)),
 	)
 	if err != nil {
 		logger.Error("Failed to load AWS config", "error", err)
