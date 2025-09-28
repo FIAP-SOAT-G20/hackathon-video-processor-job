@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-// StorageDataSource defines the port for storage operations.
+// MessageBroker defines the port for message broker operations, such as publishing messages.
 type MessageBroker interface {
 	PublishMessage(ctx context.Context, message []byte) error
 }
