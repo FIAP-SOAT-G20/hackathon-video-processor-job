@@ -8,29 +8,23 @@ import (
 )
 
 type videoGateway struct {
-	storageDataSource StorageDataSource
+	storageDataSource port.StorageDataSource
 }
 
-type StorageDataSource interface {
-	Download(ctx context.Context, key string) (io.ReadCloser, error)
-	Upload(ctx context.Context, key string, data io.Reader, contentType string, size int64) (string, error)
-	Delete(ctx context.Context, key string) error
-}
-
-func NewVideoGateway(storageDataSource StorageDataSource) port.VideoGateway {
+func NewVideoGateway(storageDataSource port.StorageDataSource) port.VideoGateway {
 	return &videoGateway{
 		storageDataSource: storageDataSource,
 	}
 }
 
 func (g *videoGateway) Download(ctx context.Context, key string) (io.ReadCloser, error) {
-	return g.storageDataSource.Download(ctx, key)
+	return g.storageDataSource.DownloadVideo(ctx, key)
 }
 
 func (g *videoGateway) Upload(ctx context.Context, key string, data io.Reader, contentType string, size int64) (string, error) {
-	return g.storageDataSource.Upload(ctx, key, data, contentType, size)
+	return g.storageDataSource.UploadProcessedFile(ctx, key, data, contentType, size)
 }
 
 func (g *videoGateway) Delete(ctx context.Context, key string) error {
-	return g.storageDataSource.Delete(ctx, key)
+	return g.storageDataSource.DeleteVideo(ctx, key)
 }

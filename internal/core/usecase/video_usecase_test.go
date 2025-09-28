@@ -44,7 +44,7 @@ func TestVideoUseCase(t *testing.T) {
 
 			// Validate and process (defaults: 1.0, png)
 			vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(nil)
-			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "png").Return(1, zipPath, nil)
+			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "jpg").Return(1, zipPath, nil)
 
 			// Upload result using hash - mock returns any key that is passed
 			fm.EXPECT().ReadFile(gomock.Any(), zipPath).Return(io.NopCloser(bytes.NewBufferString("zipdata")), nil)
@@ -141,7 +141,7 @@ func TestVideoUseCase(t *testing.T) {
 			vg.EXPECT().Download(gomock.Any(), videoKey).Return(io.NopCloser(strings.NewReader("data")), nil)
 			fm.EXPECT().WriteToFile(gomock.Any(), localPath, gomock.Any()).Return(nil)
 			vp.EXPECT().ValidateVideo(gomock.Any(), localPath).Return(nil)
-			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "png").Return(0, zipPath, nil)
+			vp.EXPECT().ProcessVideo(gomock.Any(), localPath, 1.0, "jpg").Return(0, zipPath, nil)
 
 			// defers should cleanup these files when error occurs
 			fm.EXPECT().DeleteFile(gomock.Any(), localPath).Return(nil)
@@ -265,7 +265,7 @@ func TestVideoUseCase(t *testing.T) {
 		vg.EXPECT().Download(gomock.Any(), "foo").Return(io.NopCloser(strings.NewReader("x")), nil)
 		fm.EXPECT().WriteToFile(gomock.Any(), local, gomock.Any()).Return(nil)
 		vp.EXPECT().ValidateVideo(gomock.Any(), local).Return(nil)
-		vp.EXPECT().ProcessVideo(gomock.Any(), local, 1.0, "png").Return(1, zip, nil)
+		vp.EXPECT().ProcessVideo(gomock.Any(), local, 1.0, "jpg").Return(1, zip, nil)
 
 		fm.EXPECT().ReadFile(gomock.Any(), zip).Return(nil, errors.New("read error"))
 		fm.EXPECT().DeleteFile(gomock.Any(), local).Return(nil)
@@ -291,7 +291,7 @@ func TestVideoUseCase(t *testing.T) {
 		vg.EXPECT().Download(gomock.Any(), "foo").Return(io.NopCloser(strings.NewReader("x")), nil)
 		fm.EXPECT().WriteToFile(gomock.Any(), local, gomock.Any()).Return(nil)
 		vp.EXPECT().ValidateVideo(gomock.Any(), local).Return(nil)
-		vp.EXPECT().ProcessVideo(gomock.Any(), local, 1.0, "png").Return(1, zip, nil)
+		vp.EXPECT().ProcessVideo(gomock.Any(), local, 1.0, "jpg").Return(1, zip, nil)
 
 		rc := io.NopCloser(strings.NewReader("zip"))
 		fm.EXPECT().ReadFile(gomock.Any(), zip).Return(rc, nil)

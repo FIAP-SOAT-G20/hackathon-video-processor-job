@@ -33,7 +33,10 @@ func main() {
 
 	// Initialize context with trace id, then logger
 	ctx := context.Background()
-	traceID := generateTraceID()
+	traceID, err := generateTraceID()
+	if err != nil {
+		log.Fatalf("Failed to generate trace ID: %v", err)
+	}
 	ctx = logger.SetTraceIDOnContext(ctx, traceID)
 
 	logger := logger.NewSlogLogger().With("trace_id", traceID)
@@ -104,10 +107,10 @@ func main() {
 }
 
 // generateTraceID creates a random 16-byte hex string for tracing
-func generateTraceID() string {
+func generateTraceID() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		return "unknown"
+		return "", fmt.Errorf("failed to generate trace ID: %w", err)
 	}
-	return hex.EncodeToString(b)
+	return hex.EncodeToString(b), nil
 }
