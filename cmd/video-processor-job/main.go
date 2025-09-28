@@ -8,7 +8,6 @@ import (
 	"log"
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/adapter/controller"
@@ -33,21 +32,19 @@ func main() {
 
 	// Initialize context with trace id, then logger
 	ctx := context.Background()
-	traceID := generateTraceID()
+	traceID, err := generateTraceID()
+	if err != nil {
+		log.Fatalf("Failed to generate trace ID: %v", err)
+	}
 	ctx = logger.SetTraceIDOnContext(ctx, traceID)
 
 	logger := logger.NewSlogLogger().With("trace_id", traceID)
 	logger.Info("Starting Video Processor standalone application")
 
-	// Initialize AWS config with explicit credentials
+	// Initialize AWS config
 	logger.Info("Loading AWS configuration", "region", cfg.AWS.Region)
 	awsCfg, err := awsconfig.LoadDefaultConfig(ctx,
 		awsconfig.WithRegion(cfg.AWS.Region),
-		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
-			cfg.AWS.AccessKey,
-			cfg.AWS.SecretAccessKey,
-			cfg.AWS.SessionToken,
-		)),
 	)
 	if err != nil {
 		logger.Error("Failed to load AWS config", "error", err)
@@ -104,10 +101,10 @@ func main() {
 }
 
 // generateTraceID creates a random 16-byte hex string for tracing
-func generateTraceID() string {
+func generateTraceID() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		return "unknown"
+		return "", fmt.Errorf("failed to generate trace ID: %w", err)
 	}
-	return hex.EncodeToString(b)
+	return hex.EncodeToString(b), nil
 }
