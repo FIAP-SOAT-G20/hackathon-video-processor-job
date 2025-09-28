@@ -46,7 +46,10 @@ func (g *videoGateway) UpdateStatus(ctx context.Context, videoId string, userId 
 		return fmt.Errorf("failed to marshal body: %w", err)
 	}
 
-	g.messageBroker.PublishMessage(ctx, jsonBody)
+	err = g.messageBroker.PublishMessage(ctx, jsonBody)
+	if err != nil {
+		return fmt.Errorf("failed to publish status update: %w", err)
+	}
 
 	return nil
 }
