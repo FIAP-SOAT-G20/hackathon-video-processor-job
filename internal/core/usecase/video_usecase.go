@@ -91,7 +91,7 @@ func (uc *videoUseCase) ProcessVideo(ctx context.Context, input dto.ProcessVideo
 	uc.deleteOriginalVideo(ctx, input.VideoKey)
 
 	// Step 6: Update video status
-	uc.updateVideoStatus(ctx, input.VideoId, input.UserId, videoHash, "PROCESSED")
+	uc.updateVideoStatus(ctx, input.VideoId, input.UserId, videoHash, "FINISHED")
 
 	log.Info("Video processing completed successfully", "frame_count", frameCount, "output_key", outputKey, "hash", videoHash)
 	return &dto.ProcessVideoOutput{
