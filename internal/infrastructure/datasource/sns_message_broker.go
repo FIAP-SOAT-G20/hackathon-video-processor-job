@@ -9,13 +9,13 @@ import (
 	"github.com/FIAP-SOAT-G20/hackathon-video-processor-job/internal/core/port"
 )
 
-// SNSMessageBroker implements storage operations using AWS S3
+// SNSMessageBroker implements message publishing operations using AWS SNS
 type SNSMessageBroker struct {
 	client *sns.Client
 	topic  string
 }
 
-// NewSnsMessageBroker creates a new S3 storage datasource
+// NewSnsMessageBroker creates a new SNS message broker
 func NewSnsMessageBroker(client *sns.Client, topic string) port.MessageBroker {
 	return &SNSMessageBroker{
 		client: client,
